@@ -30,6 +30,11 @@ public class BuildingBase : MonoBehaviour
         if(buildingState == BuildingState.ONGOING)ChangeBuildingStateTo(BuildingState.COMPLETE);
         uiText.text = "BUILT";
         GetComponent<XRGrabInteractable>().trackPosition = false;
+        /*
+        foreach (var collider in GetComponentsInChildren<Collider>())
+        {
+            collider.enabled = false;
+        }*/
     }
 
     void ChangeBuildingStateTo(BuildingState newBuildingState)
