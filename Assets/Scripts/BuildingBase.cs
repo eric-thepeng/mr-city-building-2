@@ -60,7 +60,7 @@ public class BuildingBase : MonoBehaviour
                 totalCost += supportBeam.CalculateSupportBeam();
             }
 
-            uiText.text = "cost: " + ((int)(totalCost * 20));
+            uiText.text = "cost: " + ((int)(totalCost * 50));
         }
     }
 }
