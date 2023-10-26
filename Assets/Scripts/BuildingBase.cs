@@ -19,6 +19,10 @@ public class BuildingBase : MonoBehaviour
     [SerializeField] private TMP_Text uiText;
     
     private BuildingState buildingState = BuildingState.WAITING;
+
+    private Vector3 initialPosition = new Vector3(0, 0, 0);
+
+    private int currentCost = 0;
     
     public void OnStartGrab()
     {
@@ -27,14 +31,20 @@ public class BuildingBase : MonoBehaviour
 
     public void OnStartRelease()
     {
-        if(buildingState == BuildingState.ONGOING)ChangeBuildingStateTo(BuildingState.COMPLETE);
-        uiText.text = "BUILT";
-        GetComponent<XRGrabInteractable>().trackPosition = false;
-        /*
-        foreach (var collider in GetComponentsInChildren<Collider>())
+        if (buildingState != BuildingState.ONGOING) return;
+
+        if (MoneyManager.i.HasMoney(currentCost))
         {
-            collider.enabled = false;
-        }*/
+            MoneyManager.i.SpendMoney(currentCost);
+            uiText.text = "BUILT";
+            GetComponent<XRGrabInteractable>().trackPosition = false;
+            ChangeBuildingStateTo(BuildingState.COMPLETE);
+        }
+        else
+        {
+            ReturnToInitialPosition();
+            ChangeBuildingStateTo(BuildingState.WAITING);
+        }
     }
 
     void ChangeBuildingStateTo(BuildingState newBuildingState)
@@ -48,6 +58,8 @@ public class BuildingBase : MonoBehaviour
         {
             supportBeam.ResetBeam();
         }
+
+        initialPosition = transform.position;
     }
 
     private void Update()
@@ -60,7 +72,14 @@ public class BuildingBase : MonoBehaviour
                 totalCost += supportBeam.CalculateSupportBeam();
             }
 
-            uiText.text = "cost: " + ((int)(totalCost * 50));
+            currentCost = ((int)(totalCost * 50));
+
+            uiText.text = "cost: " + currentCost;
         }
+    }
+
+    private void ReturnToInitialPosition()
+    {
+        transform.position = initialPosition;
     }
 }
