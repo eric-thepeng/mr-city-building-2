@@ -36,7 +36,7 @@ public class MoneyManager : MonoBehaviour
     
     public bool HasMoney(int amount)
     {
-        return this.amount < amount;
+        return this.amount >= amount;
     }
 
     public void GainMoney(int amount)

@@ -23,7 +23,10 @@ public class BuildingBase : MonoBehaviour
     private Vector3 initialPosition = new Vector3(0, 0, 0);
 
     private int currentCost = 0;
+
+    private ScoringIdentifier mySI;
     
+
     public void OnStartGrab()
     {
         if(buildingState == BuildingState.WAITING)ChangeBuildingStateTo(BuildingState.ONGOING);
@@ -37,8 +40,11 @@ public class BuildingBase : MonoBehaviour
         {
             MoneyManager.i.SpendMoney(currentCost);
             uiText.text = "BUILT";
+            uiText.transform.parent.gameObject.SetActive(false);
             GetComponent<XRGrabInteractable>().trackPosition = false;
             ChangeBuildingStateTo(BuildingState.COMPLETE);
+            mySI.CancelAllUIDisplay();
+            // score.add mySI.CalculateScoring();
         }
         else
         {
@@ -52,8 +58,14 @@ public class BuildingBase : MonoBehaviour
         buildingState = newBuildingState;
     }
 
+    private void Awake()
+    {
+        mySI = GetComponentInChildren<ScoringIdentifier>();
+    }
+
     private void Start()
     {
+
         foreach (SupportBeam supportBeam in supportBeams)
         {
             supportBeam.ResetBeam();
@@ -71,10 +83,10 @@ public class BuildingBase : MonoBehaviour
             {
                 totalCost += supportBeam.CalculateSupportBeam();
             }
-
             currentCost = ((int)(totalCost * 50));
-
             uiText.text = "cost: " + currentCost;
+
+            mySI.CalculateScoring();
         }
     }
 
