@@ -6,15 +6,25 @@ public class SupportBeam : MonoBehaviour
 {
     [SerializeField] private Transform beamBody;
     private float distance = 0;
+    private float maxDistance = 0;
+
+    private int bigNumber = 10000;
+
+    public void SetUp(float maxDistance)
+    {
+        this.maxDistance = maxDistance;
+        ResetBeam(0.02f);
+    }
     
     public float CalculateSupportBeam()
     {
         distance = GetDistanceToGround();
         AdjustSupportingBeam(distance);
+        if (distance > maxDistance) return -1;
         return distance;
     }
 
-    public void ResetBeam()
+    public void ResetBeam(float targetDistance = 0f)
     {
         distance = 0;
         AdjustSupportingBeam(distance);
@@ -27,15 +37,14 @@ public class SupportBeam : MonoBehaviour
 
         // Create a RaycastHit variable to store information about the hit
         RaycastHit hit;
-
-        // Set the maximum distance for the raycast (you can adjust this as needed)
-        float maxDistance = 2;
+        
 
         // Perform the raycast
         if (Physics.Raycast(ray, out hit, maxDistance))
         {
             // Calculate the distance to the ground collider
             float distanceToGround = hit.distance;
+            if (distanceToGround > bigNumber) distanceToGround = bigNumber;
             return distanceToGround;
         }
 
@@ -45,9 +54,15 @@ public class SupportBeam : MonoBehaviour
 
     public void AdjustSupportingBeam(float height)
     {
+        if (height > maxDistance) height = maxDistance;
+        float worldLength = height * 10 / 4;
         beamBody.transform.localScale =
-            new Vector3(beamBody.transform.localScale.x, height / 2, beamBody.transform.localScale.z);
+            new Vector3(beamBody.transform.localScale.x, worldLength / 2, beamBody.transform.localScale.z);
         beamBody.transform.localPosition =
-            new Vector3(beamBody.transform.localPosition.x, -height / 2, beamBody.transform.localPosition.z);
+            new Vector3(beamBody.transform.localPosition.x, -worldLength / 2, beamBody.transform.localPosition.z);
+        if (height == maxDistance)
+        {
+            // highlight it
+        }
     }
 }

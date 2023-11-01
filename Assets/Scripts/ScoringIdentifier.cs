@@ -8,7 +8,7 @@ public class ScoringIdentifier : MonoBehaviour
     [SerializeField] private GameObject uiGameObject;
     [SerializeField] private TMP_Text uiTxt;
     [SerializeField] private SO_BuildingIdentifier myBI;
-
+    
     public int CalculateScoring()
     {
         int scoreSum = 0;

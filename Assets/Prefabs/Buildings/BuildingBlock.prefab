@@ -11,7 +11,7 @@ PrefabInstance:
     - target: {fileID: 2339057948970247662, guid: 4ed3c15973a684f40bb8e026faca6e3c,
         type: 3}
       propertyPath: m_Name
-      value: BuildingBase Variant
+      value: BuildingBlock
       objectReference: {fileID: 0}
     - target: {fileID: 3194796426562570128, guid: 4ed3c15973a684f40bb8e026faca6e3c,
         type: 3}

@@ -15,10 +15,12 @@ public class BuildingBase : MonoBehaviour
         COMPLETE
     }
 
+    public float maxBeamLength = 0.1f;
+
     [SerializeField] private List<SupportBeam> supportBeams = new List<SupportBeam>();
     [SerializeField] private TMP_Text uiText;
     
-    private BuildingState buildingState = BuildingState.WAITING;
+    public BuildingState buildingState = BuildingState.WAITING;
 
     private Vector3 initialPosition = new Vector3(0, 0, 0);
 
@@ -36,20 +38,19 @@ public class BuildingBase : MonoBehaviour
     {
         if (buildingState != BuildingState.ONGOING) return;
 
-        if (MoneyManager.i.HasMoney(currentCost))
+        if (currentCost != -1 && MoneyManager.i.HasMoney(currentCost))
         {
             MoneyManager.i.SpendMoney(currentCost);
             uiText.text = "BUILT";
             uiText.transform.parent.gameObject.SetActive(false);
             GetComponent<XRGrabInteractable>().trackPosition = false;
-            ChangeBuildingStateTo(BuildingState.COMPLETE);
+            ChangeBuildingStateTo(BuildingState.COMPLETE); 
             mySI.CancelAllUIDisplay();
             // score.add mySI.CalculateScoring();
         }
         else
         {
-            ReturnToInitialPosition();
-            ChangeBuildingStateTo(BuildingState.WAITING);
+            ResetToWaiting();
         }
     }
 
@@ -68,7 +69,7 @@ public class BuildingBase : MonoBehaviour
 
         foreach (SupportBeam supportBeam in supportBeams)
         {
-            supportBeam.ResetBeam();
+            supportBeam.SetUp(maxBeamLength);
         }
 
         initialPosition = transform.position;
@@ -78,20 +79,48 @@ public class BuildingBase : MonoBehaviour
     {
         if (buildingState == BuildingState.ONGOING)
         {
+            bool canBuild = true;
             float totalCost = 0;
             foreach (SupportBeam supportBeam in supportBeams)
             {
-                totalCost += supportBeam.CalculateSupportBeam();
+                float beamLength = supportBeam.CalculateSupportBeam();
+                if (beamLength == -1)
+                {
+                    canBuild = false;
+                }
+                totalCost += beamLength;
             }
-            currentCost = ((int)(totalCost * 50));
-            uiText.text = "cost: " + currentCost;
 
+            if (canBuild == false)
+            {
+                currentCost = -1;
+            }
+            else
+            {
+                currentCost = ((int)(totalCost * 100));
+            }
+            if (canBuild)
+            {
+                uiText.text = "cost: " + currentCost;
+            }
+            else
+            {
+                uiText.text = "can not build here";
+            }
             mySI.CalculateScoring();
         }
     }
 
-    private void ReturnToInitialPosition()
+    private void ResetToWaiting()
     {
+        ChangeBuildingStateTo(BuildingState.WAITING);
+        foreach (SupportBeam supportBeam in supportBeams)
+        {
+            supportBeam.SetUp(maxBeamLength);
+        }
+        uiText.text = "Grab";
+        mySI.CancelAllUIDisplay();
         transform.position = initialPosition;
+
     }
 }
