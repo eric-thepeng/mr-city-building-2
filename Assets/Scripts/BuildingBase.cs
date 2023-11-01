@@ -19,6 +19,7 @@ public class BuildingBase : MonoBehaviour
 
     [SerializeField] private List<SupportBeam> supportBeams = new List<SupportBeam>();
     [SerializeField] private TMP_Text uiText;
+    [SerializeField] private Transform distanceDetectIndicator;
     
     public BuildingState buildingState = BuildingState.WAITING;
 
@@ -32,12 +33,21 @@ public class BuildingBase : MonoBehaviour
     public void OnStartGrab()
     {
         if(buildingState == BuildingState.WAITING)ChangeBuildingStateTo(BuildingState.ONGOING);
+        distanceDetectIndicator.gameObject.SetActive(true);
+        float scaleFloat = mySI.GetBI().detectDistance * 2 / transform.localScale.x;
+        distanceDetectIndicator.transform.localScale = new Vector3(scaleFloat, scaleFloat, scaleFloat);
     }
 
     public void OnStartRelease()
     {
-        if (buildingState != BuildingState.ONGOING) return;
+        if (buildingState != BuildingState.ONGOING)
+        {
+            Debug.LogError("Release GameObject when state is not ONGOING");
+            return;
+        }
 
+        distanceDetectIndicator.gameObject.SetActive(false);
+        
         if (currentCost != -1 && MoneyManager.i.HasMoney(currentCost))
         {
             MoneyManager.i.SpendMoney(currentCost);
