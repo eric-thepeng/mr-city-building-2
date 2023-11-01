@@ -44,7 +44,7 @@ MonoBehaviour:
       Data: 0
     - Name: $v
       Entry: 3
-      Data: 5
+      Data: 2
     - Name: 
       Entry: 8
       Data: 
@@ -54,3 +54,4 @@ MonoBehaviour:
     - Name: 
       Entry: 8
       Data: 
+  freeMoney: 0
