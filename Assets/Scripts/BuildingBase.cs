@@ -21,6 +21,9 @@ public class BuildingBase : MonoBehaviour
     [SerializeField] private List<SupportBeam> supportBeams = new List<SupportBeam>();
     [SerializeField] private TMP_Text uiText;
     [SerializeField] private Transform distanceDetectIndicator;
+
+    [SerializeField] private GameObject regularGameObject;
+    [SerializeField] private GameObject errorGameObject;
     
     public BuildingState buildingState = BuildingState.WAITING;
 
