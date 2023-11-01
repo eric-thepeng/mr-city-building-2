@@ -62,6 +62,7 @@ public class BuildingBase : MonoBehaviour
             mySI.HarvestScore();
             mySI.CancelAllUIDisplay();
             mySI.canScore = true;
+            HandManager.i.ABuildingIsBuilt();
         }
         else
         {
