@@ -34,7 +34,7 @@ public class BuildingBase : MonoBehaviour
     public void OnStartGrab()
     {
         if(buildingState == BuildingState.WAITING)ChangeBuildingStateTo(BuildingState.ONGOING);
-        distanceDetectIndicator.gameObject.SetActive(true);
+        //distanceDetectIndicator.gameObject.SetActive(true);
         float scaleFloat = mySI.GetBI().detectDistance * 2 / transform.localScale.x;
         distanceDetectIndicator.transform.localScale = new Vector3(scaleFloat, scaleFloat, scaleFloat);
     }
@@ -47,7 +47,7 @@ public class BuildingBase : MonoBehaviour
             return;
         }
 
-        distanceDetectIndicator.gameObject.SetActive(false);
+        //distanceDetectIndicator.gameObject.SetActive(false);
         
         if (currentCost != -1 && MoneyManager.i.HasMoney(currentCost))
         {
@@ -56,8 +56,8 @@ public class BuildingBase : MonoBehaviour
             uiText.transform.parent.gameObject.SetActive(false);
             GetComponent<XRGrabInteractable>().trackPosition = false;
             ChangeBuildingStateTo(BuildingState.COMPLETE); 
+            mySI.HarvestScore();
             mySI.CancelAllUIDisplay();
-            // score.add mySI.CalculateScoring();
         }
         else
         {

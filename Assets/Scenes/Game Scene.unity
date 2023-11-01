@@ -12115,6 +12115,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2085274536}
   - component: {fileID: 2085274537}
+  - component: {fileID: 2085274538}
   m_Layer: 0
   m_Name: Game System
   m_TagString: Untagged
@@ -12151,6 +12152,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   amount: 100
   moneyTxt: {fileID: 440414302}
+--- !u!114 &2085274538
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2085274535}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a9d5da9b54616304589747bb0f65dbfc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  amount: 0
+  scoreTxt: {fileID: 1953562374}
 --- !u!4 &2088322184 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5935830353725771993, guid: 79bd1ef5d049bdd46ad544731e575f9c,
