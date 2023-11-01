@@ -16,7 +16,6 @@ Material:
   - _MK_ARTISTIC_DRAWN
   - _MK_ARTISTIC_PROJECTION_SCREEN_SPACE
   - _MK_DETAIL_BLEND_MIX
-  - _MK_EMISSION
   - _MK_ENVIRONMENT_REFLECTIONS_ADVANCED
   - _MK_LIGHT_CEL
   - _MK_OUTLINE_HULL_CLIP
@@ -220,7 +219,7 @@ Material:
     - _DissolveMapScale: 1
     - _DrawnClampMax: 1
     - _DrawnClampMin: 0.3
-    - _DrawnMapScale: 2
+    - _DrawnMapScale: 1
     - _DstBlend: 0
     - _EnvironmentReflections: 2
     - _FresnelHighlights: 0
@@ -297,11 +296,11 @@ Material:
     - _ZTest: 4
     - _ZWrite: 1
     m_Colors:
-    - _AlbedoColor: {r: 1, g: 0, b: 0.23333311, a: 1}
-    - _Color: {r: 1, g: 0, b: 0.23333308, a: 1}
+    - _AlbedoColor: {r: 0.3817463, g: 0, b: 1, a: 1}
+    - _Color: {r: 0.38174626, g: 0, b: 1, a: 1}
     - _DetailColor: {r: 1, g: 1, b: 1, a: 1}
     - _DissolveBorderColor: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 2.2595122, g: 0.08690432, b: 0.08690432, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _GoochBrightColor: {r: 1, g: 1, b: 1, a: 1}
     - _GoochDarkColor: {r: 0.4056604, g: 0.4056604, b: 0.4056604, a: 1}
     - _IridescenceColor: {r: 1, g: 1, b: 1, a: 0.5}
