@@ -8,6 +8,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 217255631865916195, guid: 4ed3c15973a684f40bb8e026faca6e3c,
+        type: 3}
+      propertyPath: maxBeamLength
+      value: 0.2
+      objectReference: {fileID: 0}
     - target: {fileID: 2339057948970247662, guid: 4ed3c15973a684f40bb8e026faca6e3c,
         type: 3}
       propertyPath: m_Name

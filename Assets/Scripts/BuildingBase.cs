@@ -58,6 +58,7 @@ public class BuildingBase : MonoBehaviour
             ChangeBuildingStateTo(BuildingState.COMPLETE); 
             mySI.HarvestScore();
             mySI.CancelAllUIDisplay();
+            mySI.canScore = true;
         }
         else
         {
@@ -83,6 +84,7 @@ public class BuildingBase : MonoBehaviour
             supportBeam.SetUp(maxBeamLength);
         }
 
+        mySI.canScore = false;
         initialPosition = transform.position;
     }
 
@@ -110,8 +112,17 @@ public class BuildingBase : MonoBehaviour
             {
                 currentCost = ((int)(totalCost * 100));
             }
+            
             if (canBuild)
             {
+                if (currentCost > MoneyManager.i.GetAmount())
+                {
+                    uiText.color = Color.red;
+                }
+                else
+                {
+                    uiText.color = Color.white;
+                }
                 uiText.text = "cost: " + currentCost;
             }
             else

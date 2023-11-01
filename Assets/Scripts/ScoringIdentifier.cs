@@ -9,21 +9,25 @@ public class ScoringIdentifier : MonoBehaviour
     [SerializeField] private GameObject uiGameObject;
     [SerializeField] private TMP_Text uiTxt;
     [SerializeField] private SO_BuildingIdentifier myBI;
+    [SerializeField] private GameObject activeBackground;
+    [SerializeField] private GameObject passiveBackground;
+
 
     int currentScore;
     private GameObject flyingScoreGameObject;
+    public bool canScore = true;
     
     public int CalculateScoring(bool harvestScore = false)
     {
         int scoreSum = 0;
         foreach (ScoringIdentifier si in FindObjectsOfType<ScoringIdentifier>())
         {
-            if(si == this) continue;
+            if(si == this || !si.canScore) continue;
             if ((si.gameObject.transform.position - gameObject.transform.position).magnitude <= myBI.detectDistance)
             {
                 int thisScore = GetScoreFrom(myBI, si.GetBI());
                 scoreSum += thisScore;
-                si.UIDisplay(thisScore);
+                si.UIDisplay(thisScore,false);
                 if (harvestScore)
                 {
                     si.SendAndAddScore(thisScore);
@@ -34,8 +38,8 @@ public class ScoringIdentifier : MonoBehaviour
                 si.UICancelDisplay();
             }
         }
-
-        UIDisplay(scoreSum);
+        
+        UIDisplay(scoreSum,true);
         return scoreSum;
     }
 
@@ -83,7 +87,7 @@ public class ScoringIdentifier : MonoBehaviour
         uiGameObject.SetActive(false);
     }
 
-    public void UIDisplay(int score)
+    public void UIDisplay(int score, bool displayActive)
     {
         if (score == 0)
         {
@@ -93,6 +97,17 @@ public class ScoringIdentifier : MonoBehaviour
         uiGameObject.SetActive(true);
         uiTxt.text = score > 0 ? "+" : "-";
         uiTxt.text += score;
+
+        if (displayActive)
+        {
+            activeBackground.SetActive(true);
+            passiveBackground.SetActive(false);
+        }
+        else
+        {
+            activeBackground.SetActive(false);
+            passiveBackground.SetActive(true);
+        }
     }
 
 
