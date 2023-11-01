@@ -5,6 +5,7 @@ using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
+using DG.Tweening;
 
 public class BuildingBase : MonoBehaviour
 {
@@ -130,7 +131,7 @@ public class BuildingBase : MonoBehaviour
         }
         uiText.text = "Grab";
         mySI.CancelAllUIDisplay();
-        transform.position = initialPosition;
-
+        //transform. initialPosition;
+        transform.DOMove(initialPosition, 0.5f);
     }
 }
