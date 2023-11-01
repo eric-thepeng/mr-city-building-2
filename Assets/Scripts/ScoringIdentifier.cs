@@ -67,13 +67,13 @@ public class ScoringIdentifier : MonoBehaviour
         currentScore = scoreToSend;
         flyingScoreGameObject = Instantiate(uiTxt.gameObject.transform.parent.gameObject);
         flyingScoreGameObject.transform.position = this.transform.position;
-        flyingScoreGameObject.transform.DOMove(ScoreManager.i.GetUIPosition(), 1f).OnComplete(AddScore);
+        flyingScoreGameObject.transform.DOMove(MoneyManager.i.GetUIPosition(), 1f).OnComplete(AddScore);
         UICancelDisplay();
     }
     
     private void AddScore()
     {
-        ScoreManager.i.AddScore(currentScore);
+        MoneyManager.i.GainMoney(currentScore);
         Destroy(flyingScoreGameObject);
     }
 

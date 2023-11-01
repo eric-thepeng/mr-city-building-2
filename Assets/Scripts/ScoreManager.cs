@@ -6,6 +6,7 @@ using TMPro;
 
 public class ScoreManager : MonoBehaviour
 {
+    /*
     static ScoreManager instance;
     public static ScoreManager i
     {
@@ -46,5 +47,5 @@ public class ScoreManager : MonoBehaviour
     {
         amount += addAmount;
         UpdateUI();
-    }
+    }*/
 }

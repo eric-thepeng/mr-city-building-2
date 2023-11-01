@@ -59,4 +59,9 @@ public class MoneyManager : MonoBehaviour
     {
         return amount;
     }
+    
+    public Vector3 GetUIPosition()
+    {
+        return moneyTxt.gameObject.transform.position;
+    }
 }
