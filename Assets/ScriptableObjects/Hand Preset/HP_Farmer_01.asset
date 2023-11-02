@@ -9,35 +9,34 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1c5ac739ddaaced4685c42567ff6c8d4, type: 3}
-  m_Name: SOBI_Factory
+  m_Script: {fileID: 11500000, guid: 404e9cd153c9f4435a75b6a238a4dac9, type: 3}
+  m_Name: HP_Farmer_01
   m_EditorClassIdentifier: 
   serializationData:
     SerializedFormat: 2
     SerializedBytes: 
     ReferencedUnityObjects:
-    - {fileID: 11400000}
-    - {fileID: 11400000, guid: 3ca7a742988a60141830feb90287ea24, type: 2}
-    - {fileID: 11400000, guid: b68faca82f3074344ad438291225e361, type: 2}
+    - {fileID: 4151138396003029591, guid: c42776674190c784abe92a39e1d0ccaa, type: 3}
+    - {fileID: 4151138396003029591, guid: 998aaf7ece092bc4f831b4f66b88fbca, type: 3}
     SerializedBytesString: 
     Prefab: {fileID: 0}
     PrefabModificationsReferencedUnityObjects: []
     PrefabModifications: []
     SerializationNodes:
-    - Name: scoringScheme
+    - Name: BuildingAndAmount
       Entry: 7
-      Data: 0|System.Collections.Generic.Dictionary`2[[SO_BuildingIdentifier, Assembly-CSharp],[System.Int32,
+      Data: 0|System.Collections.Generic.Dictionary`2[[UnityEngine.GameObject, UnityEngine.CoreModule],[System.Int32,
         mscorlib]], mscorlib
     - Name: comparer
       Entry: 7
-      Data: 1|System.Collections.Generic.ObjectEqualityComparer`1[[SO_BuildingIdentifier,
-        Assembly-CSharp]], mscorlib
+      Data: 1|System.Collections.Generic.ObjectEqualityComparer`1[[UnityEngine.GameObject,
+        UnityEngine.CoreModule]], mscorlib
     - Name: 
       Entry: 8
       Data: 
     - Name: 
       Entry: 12
-      Data: 3
+      Data: 2
     - Name: 
       Entry: 7
       Data: 
@@ -46,7 +45,7 @@ MonoBehaviour:
       Data: 0
     - Name: $v
       Entry: 3
-      Data: 0
+      Data: 1
     - Name: 
       Entry: 8
       Data: 
@@ -58,19 +57,7 @@ MonoBehaviour:
       Data: 1
     - Name: $v
       Entry: 3
-      Data: 0
-    - Name: 
-      Entry: 8
-      Data: 
-    - Name: 
-      Entry: 7
-      Data: 
-    - Name: $k
-      Entry: 10
-      Data: 2
-    - Name: $v
-      Entry: 3
-      Data: 0
+      Data: 3
     - Name: 
       Entry: 8
       Data: 
@@ -80,5 +67,4 @@ MonoBehaviour:
     - Name: 
       Entry: 8
       Data: 
-  buildingName: Factory
-  detectDistance: 0.3
+  freeMoney: 0

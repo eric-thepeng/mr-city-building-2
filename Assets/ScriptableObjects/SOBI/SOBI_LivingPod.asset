@@ -10,18 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1c5ac739ddaaced4685c42567ff6c8d4, type: 3}
-  m_Name: SOBI_Warehouse
+  m_Name: SOBI_LivingPod
   m_EditorClassIdentifier: 
   serializationData:
     SerializedFormat: 2
     SerializedBytes: 
     ReferencedUnityObjects:
-    - {fileID: 11400000, guid: 3ca7a742988a60141830feb90287ea24, type: 2}
-    - {fileID: 11400000, guid: b68faca82f3074344ad438291225e361, type: 2}
-    - {fileID: 11400000, guid: 58213b071c567434aaa72fcb16f72a7c, type: 2}
-    - {fileID: 11400000, guid: fc45bbc201e88c448af1f549323f84f2, type: 2}
-    - {fileID: 11400000, guid: 512d1734b351fa941bf2d7c94d2ee197, type: 2}
     - {fileID: 11400000}
+    - {fileID: 11400000, guid: fc45bbc201e88c448af1f549323f84f2, type: 2}
+    - {fileID: 11400000, guid: 991b292bbbc2a0344804e79f91057af3, type: 2}
     SerializedBytesString: 
     Prefab: {fileID: 0}
     PrefabModificationsReferencedUnityObjects: []
@@ -40,7 +37,7 @@ MonoBehaviour:
       Data: 
     - Name: 
       Entry: 12
-      Data: 6
+      Data: 3
     - Name: 
       Entry: 7
       Data: 
@@ -49,7 +46,7 @@ MonoBehaviour:
       Data: 0
     - Name: $v
       Entry: 3
-      Data: 0
+      Data: 2
     - Name: 
       Entry: 8
       Data: 
@@ -61,7 +58,7 @@ MonoBehaviour:
       Data: 1
     - Name: $v
       Entry: 3
-      Data: 0
+      Data: 3
     - Name: 
       Entry: 8
       Data: 
@@ -73,43 +70,7 @@ MonoBehaviour:
       Data: 2
     - Name: $v
       Entry: 3
-      Data: 0
-    - Name: 
-      Entry: 8
-      Data: 
-    - Name: 
-      Entry: 7
-      Data: 
-    - Name: $k
-      Entry: 10
-      Data: 3
-    - Name: $v
-      Entry: 3
-      Data: 0
-    - Name: 
-      Entry: 8
-      Data: 
-    - Name: 
-      Entry: 7
-      Data: 
-    - Name: $k
-      Entry: 10
-      Data: 4
-    - Name: $v
-      Entry: 3
-      Data: 0
-    - Name: 
-      Entry: 8
-      Data: 
-    - Name: 
-      Entry: 7
-      Data: 
-    - Name: $k
-      Entry: 10
-      Data: 5
-    - Name: $v
-      Entry: 3
-      Data: 0
+      Data: 1
     - Name: 
       Entry: 8
       Data: 
@@ -119,5 +80,5 @@ MonoBehaviour:
     - Name: 
       Entry: 8
       Data: 
-  buildingName: Warehouse
-  detectDistance: 0.3
+  buildingName: LivingPod
+  detectDistance: 0.15
