@@ -32,26 +32,29 @@ public class BuildingBase : MonoBehaviour
     private int currentCost = 0;
 
     private ScoringIdentifier mySI;
+    private bool displayState = true;
     
 
     public void OnStartGrab()
     {
         if(buildingState == BuildingState.WAITING)ChangeBuildingStateTo(BuildingState.ONGOING);
-        //distanceDetectIndicator.gameObject.SetActive(true);
+        distanceDetectIndicator.gameObject.SetActive(true);
         float scaleFloat = mySI.GetBI().detectDistance * 2 / transform.localScale.x;
         distanceDetectIndicator.transform.localScale = new Vector3(scaleFloat, scaleFloat, scaleFloat);
     }
 
     public void OnStartRelease()
     {
+        // Case: ERROR
         if (buildingState != BuildingState.ONGOING)
         {
             Debug.LogError("Release GameObject when state is not ONGOING");
             return;
         }
 
-        //distanceDetectIndicator.gameObject.SetActive(false);
+        distanceDetectIndicator.gameObject.SetActive(false);
         
+        // Case: Build Success
         if (currentCost != -1 && MoneyManager.i.HasMoney(currentCost))
         {
             MoneyManager.i.SpendMoney(currentCost);
@@ -64,8 +67,10 @@ public class BuildingBase : MonoBehaviour
             mySI.canScore = true;
             HandManager.i.ABuildingIsBuilt();
         }
+        // Case: Build Not Success
         else
         {
+            ChangeDisplayState(true);
             ResetToWaiting();
         }
     }
@@ -90,52 +95,69 @@ public class BuildingBase : MonoBehaviour
 
         mySI.canScore = false;
         initialPosition = transform.position;
+        
+        ChangeDisplayState(true, true);
     }
 
     private void Update()
     {
         if (buildingState == BuildingState.ONGOING)
         {
-            bool canBuild = true;
+            bool nowCanBuild = true;
             float totalCost = 0;
             foreach (SupportBeam supportBeam in supportBeams)
             {
                 float beamLength = supportBeam.CalculateSupportBeam();
                 if (beamLength == -1)
                 {
-                    canBuild = false;
+                    nowCanBuild = false;
                 }
                 totalCost += beamLength;
             }
 
-            if (canBuild == false)
+            if (nowCanBuild == false)
             {
                 currentCost = -1;
+                uiText.text = "can not build here";
+                ChangeDisplayState(false);
             }
             else
             {
+                if (currentCost <= MoneyManager.i.GetAmount()) //enough money
+                {
+                    ChangeDisplayState(true);
+                }
+                else //not have enough money
+                {
+                    ChangeDisplayState(false);
+                }
+                uiText.text = "cost: " + currentCost;
                 currentCost = ((int)(totalCost * 100));
             }
             
-            if (canBuild)
-            {
-                if (currentCost > MoneyManager.i.GetAmount())
-                {
-                    uiText.color = Color.red;
-                }
-                else
-                {
-                    uiText.color = Color.white;
-                }
-                uiText.text = "cost: " + currentCost;
-            }
-            else
-            {
-                uiText.text = "can not build here";
-            }
             mySI.CalculateScoring();
         }
     }
+    
+
+    void ChangeDisplayState(bool changeTo, bool forceChange = false)
+    {
+        if(!forceChange && displayState == changeTo) return;
+        displayState = changeTo;
+        if (displayState)
+        {
+            uiText.color = Color.white;
+            regularGameObject.SetActive(true);
+            errorGameObject.SetActive(false);
+        }
+        else
+        {
+            uiText.color = Color.red;
+            regularGameObject.SetActive(false);
+            errorGameObject.SetActive(true);
+        }
+    }
+    
 
     private void ResetToWaiting()
     {

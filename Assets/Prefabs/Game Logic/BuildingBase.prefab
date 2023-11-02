@@ -62,7 +62,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: fad4abf0fc85dd148b0c7c73bc727481, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -433,6 +433,8 @@ MonoBehaviour:
   - {fileID: 7340137947254680834}
   uiText: {fileID: 7688150745422231926}
   distanceDetectIndicator: {fileID: 4184000034649076896}
+  regularGameObject: {fileID: 0}
+  errorGameObject: {fileID: 0}
   buildingState: 0
 --- !u!1 &3194796426562570128
 GameObject:

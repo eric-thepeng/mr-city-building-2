@@ -1691,6 +1691,11 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 2042038799}
     m_Modifications:
+    - target: {fileID: 6445041806997507874, guid: 0bf62af8fb11691488e3a28638739fcd,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6498694544887772432, guid: 0bf62af8fb11691488e3a28638739fcd,
         type: 3}
       propertyPath: m_Name
@@ -1749,7 +1754,11 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2669547509461542215, guid: 0bf62af8fb11691488e3a28638739fcd,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 0}
   m_SourcePrefab: {fileID: 100100000, guid: 0bf62af8fb11691488e3a28638739fcd, type: 3}
 --- !u!4 &467223667 stripped
 Transform:
@@ -12290,7 +12299,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   allHandPresets:
-  - {fileID: 11400000, guid: ed4630549782044c69c7788a445a14d2, type: 2}
+  - {fileID: 11400000, guid: b1456948a3d1ea342ac640711c4d3ffb, type: 2}
+  - {fileID: 11400000, guid: 9f11cd42899d368499f1ad5323b9dc7b, type: 2}
+  - {fileID: 11400000, guid: 48a70a31e2fb506498a2f82d21c76608, type: 2}
+  - {fileID: 11400000, guid: 2bef1e830dc0d2c43a98ed8cb9918866, type: 2}
+  - {fileID: 11400000, guid: 372d7e6dcae94c047962a65855c44fd6, type: 2}
+  - {fileID: 11400000, guid: f617fe6ca36a60c49a9fcc632fa5a043, type: 2}
+  - {fileID: 11400000, guid: c289f8d61a2d6044ba5bc35232238c1c, type: 2}
+  - {fileID: 11400000, guid: 76c815ec8873ac34fa796dd39b3b0044, type: 2}
+  - {fileID: 11400000, guid: 37753ea45fb17274b8f826e1de0a8289, type: 2}
+  - {fileID: 11400000, guid: 5a7a44d5f63f9c74eadbc1d601d9cf7e, type: 2}
   buildingSpawningLocationCenter: {fileID: 1104500996}
 --- !u!4 &2088322184 stripped
 Transform:
