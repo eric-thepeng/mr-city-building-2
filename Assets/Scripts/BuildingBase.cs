@@ -92,6 +92,7 @@ public class BuildingBase : MonoBehaviour
         {
             supportBeam.SetUp(maxBeamLength);
         }
+        uiText.text = mySI.GetBI().buildingName;
 
         mySI.canScore = false;
         initialPosition = transform.position;
@@ -166,7 +167,8 @@ public class BuildingBase : MonoBehaviour
         {
             supportBeam.SetUp(maxBeamLength);
         }
-        uiText.text = "Grab";
+
+        uiText.text = mySI.GetBI().buildingName;
         mySI.CancelAllUIDisplay();
         //transform. initialPosition;
         transform.DOMove(initialPosition, 0.5f);

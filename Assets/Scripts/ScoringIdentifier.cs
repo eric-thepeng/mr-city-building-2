@@ -12,7 +12,6 @@ public class ScoringIdentifier : MonoBehaviour
     [SerializeField] private GameObject activeBackground;
     [SerializeField] private GameObject passiveBackground;
 
-
     int currentScore;
     private GameObject flyingScoreGameObject;
     public bool canScore = true;
@@ -50,7 +49,7 @@ public class ScoringIdentifier : MonoBehaviour
 
     public int GetScoreFrom(SO_BuildingIdentifier origionBI, SO_BuildingIdentifier targetBI)
     {
-        if (targetBI.scoringScheme.ContainsKey(origionBI)) return targetBI.scoringScheme[origionBI];
+        if (origionBI.scoringScheme.ContainsKey(targetBI)) return origionBI.scoringScheme[targetBI];
         return 0;
     }
 

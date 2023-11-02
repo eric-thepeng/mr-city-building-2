@@ -13,7 +13,6 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _MK_ARTISTIC_ANIMATION_STUTTER
-  - _MK_ARTISTIC_DRAWN
   - _MK_ARTISTIC_PROJECTION_SCREEN_SPACE
   - _MK_DETAIL_BLEND_MIX
   - _MK_ENVIRONMENT_REFLECTIONS_ADVANCED
@@ -195,7 +194,7 @@ Material:
     - _AlphaClipping: 0
     - _AlphaCutoff: 0.5
     - _Anisotropy: 0
-    - _Artistic: 1
+    - _Artistic: 0
     - _ArtisticFrequency: 1
     - _ArtisticProjection: 1
     - _Blend: 0
