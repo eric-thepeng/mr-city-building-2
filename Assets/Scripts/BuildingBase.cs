@@ -24,6 +24,8 @@ public class BuildingBase : MonoBehaviour
 
     [SerializeField] private GameObject regularGameObject;
     [SerializeField] private GameObject errorGameObject;
+
+    [SerializeField] private GameObject infoUIGameObject;
     
     public BuildingState buildingState = BuildingState.WAITING;
 
@@ -38,6 +40,9 @@ public class BuildingBase : MonoBehaviour
     public void OnStartGrab()
     {
         if(buildingState == BuildingState.WAITING)ChangeBuildingStateTo(BuildingState.ONGOING);
+        else if(buildingState == BuildingState.COMPLETE) return;
+        
+        //set up distance detector
         distanceDetectIndicator.gameObject.SetActive(true);
         float scaleFloat = mySI.GetBI().detectDistance * 2 / transform.localScale.x;
         distanceDetectIndicator.transform.localScale = new Vector3(scaleFloat, scaleFloat, scaleFloat);
@@ -73,6 +78,33 @@ public class BuildingBase : MonoBehaviour
             ChangeDisplayState(true);
             ResetToWaiting();
         }
+    }
+
+    public void OnStartHover()
+    {
+        if(buildingState == BuildingState.WAITING) OpenInfoUI();
+    }
+
+    public void OnExitHover()
+    {
+        CloseInfoUI();
+    }
+
+    private void OpenInfoUI()
+    {
+        infoUIGameObject.SetActive(true);
+        string infoText = mySI.GetBI().buildingName + "\n";
+        foreach (var kvp in mySI.GetBI().scoringScheme)
+        {
+            infoText += kvp.Key.buildingName + " " + kvp.Value + "\n";
+        }
+
+        infoUIGameObject.GetComponentInChildren<TextMeshPro>().text = infoText;
+    }
+
+    private void CloseInfoUI()
+    {
+        infoUIGameObject.SetActive(false);
     }
 
     void ChangeBuildingStateTo(BuildingState newBuildingState)
