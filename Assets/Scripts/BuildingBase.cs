@@ -70,6 +70,7 @@ public class BuildingBase : MonoBehaviour
             mySI.HarvestScore();
             mySI.CancelAllUIDisplay();
             mySI.canScore = true;
+            CloseInfoUI();
             HandManager.i.ABuildingIsBuilt();
         }
         // Case: Build Not Success
@@ -83,20 +84,30 @@ public class BuildingBase : MonoBehaviour
     public void OnStartHover()
     {
         if(buildingState == BuildingState.WAITING) OpenInfoUI();
+        else if (buildingState == BuildingState.COMPLETE)
+        {
+            uiText.text = mySI.GetBI().buildingName;
+            uiText.transform.parent.gameObject.SetActive(true);
+        }
     }
 
     public void OnExitHover()
     {
-        CloseInfoUI();
+        if(buildingState == BuildingState.WAITING) CloseInfoUI();
+        else if (buildingState == BuildingState.COMPLETE)
+        {
+            uiText.transform.parent.gameObject.SetActive(false);
+        }
     }
 
     private void OpenInfoUI()
     {
         infoUIGameObject.SetActive(true);
-        string infoText = mySI.GetBI().buildingName + "\n";
+        string infoText = "";//mySI.GetBI().buildingName + "\n";
         foreach (var kvp in mySI.GetBI().scoringScheme)
         {
-            infoText += kvp.Key.buildingName + " " + kvp.Value + "\n";
+            string extra = kvp.Value > 0 ? "+" : ""; 
+            infoText += kvp.Key.buildingName + "   " + extra + kvp.Value + "\n";
         }
 
         infoUIGameObject.GetComponentInChildren<TextMeshPro>().text = infoText;

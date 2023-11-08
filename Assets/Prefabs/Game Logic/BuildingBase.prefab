@@ -163,8 +163,8 @@ Transform:
   m_GameObject: {fileID: 1633420107657257422}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.1324, z: 0}
-  m_LocalScale: {x: 0.19189385, y: 0.07402305, z: 1}
+  m_LocalPosition: {x: 0, y: 0.1652, z: 0}
+  m_LocalScale: {x: 0.12953027, y: 0.13792716, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 9212406061650626747}
@@ -746,6 +746,7 @@ GameObject:
   - component: {fileID: 1618646243439949194}
   - component: {fileID: 2673611216858976020}
   - component: {fileID: 2451153162523816319}
+  - component: {fileID: 1022921417145244135}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -761,7 +762,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5371466587329539789}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0.01}
+  m_LocalPosition: {x: 0, y: 0, z: -0.001}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -769,7 +770,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.084, y: 0.1129}
+  m_AnchoredPosition: {x: 0, y: 0.2095}
   m_SizeDelta: {x: 0.5, y: 0.15}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!23 &2673611216858976020
@@ -834,7 +835,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "Building Name\n+5 What \n+5 What"
+  m_text: "What   +5 \nWhat What   +5"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -868,7 +869,7 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
+  m_HorizontalAlignment: 2
   m_VerticalAlignment: 256
   m_textAlignment: 65535
   m_characterSpacing: 0
@@ -906,6 +907,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 2673611216858976020}
   m_maskType: 0
+--- !u!210 &1022921417145244135
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5371466587329539789}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 10
+  m_SortAtRoot: 0
 --- !u!1 &5510412199666130267
 GameObject:
   m_ObjectHideFlags: 0
@@ -1017,6 +1030,7 @@ GameObject:
   - component: {fileID: 3426447854829361174}
   - component: {fileID: 1855128635111615890}
   - component: {fileID: 7688150745422231926}
+  - component: {fileID: 8950149709831989311}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -1032,7 +1046,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8904699608059315180}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -0.01}
+  m_LocalPosition: {x: 0, y: 0, z: -0.001}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1177,6 +1191,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_renderer: {fileID: 1855128635111615890}
   m_maskType: 0
+--- !u!210 &8950149709831989311
+SortingGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8904699608059315180}
+  m_Enabled: 1
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 10
+  m_SortAtRoot: 0
 --- !u!1001 &493628387184183886
 PrefabInstance:
   m_ObjectHideFlags: 0
