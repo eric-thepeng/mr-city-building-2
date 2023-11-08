@@ -80,5 +80,5 @@ MonoBehaviour:
     - Name: 
       Entry: 8
       Data: 
-  buildingName: LivingPod
+  buildingName: Living Pod
   detectDistance: 0.15

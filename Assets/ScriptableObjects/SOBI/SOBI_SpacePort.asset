@@ -80,5 +80,5 @@ MonoBehaviour:
     - Name: 
       Entry: 8
       Data: 
-  buildingName: SpacePort
+  buildingName: Space Port
   detectDistance: 0.4
