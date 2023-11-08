@@ -81,4 +81,4 @@ MonoBehaviour:
       Entry: 8
       Data: 
   buildingName: Gas Extractor
-  detectDistance: 0.35
+  detectDistance: 0.25

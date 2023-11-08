@@ -13697,8 +13697,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   allHandPresets:
-  - {fileID: 11400000, guid: b1456948a3d1ea342ac640711c4d3ffb, type: 2}
-  - {fileID: 11400000, guid: 9f11cd42899d368499f1ad5323b9dc7b, type: 2}
   - {fileID: 11400000, guid: 48a70a31e2fb506498a2f82d21c76608, type: 2}
   - {fileID: 11400000, guid: 2bef1e830dc0d2c43a98ed8cb9918866, type: 2}
   - {fileID: 11400000, guid: 372d7e6dcae94c047962a65855c44fd6, type: 2}
