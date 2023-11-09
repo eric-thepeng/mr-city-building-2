@@ -75,7 +75,7 @@ PrefabInstance:
     - target: {fileID: -3122563306166884067, guid: dcc8f59b4042890488d0a91e1febd322,
         type: 3}
       propertyPath: m_Convex
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: -3122563306166884067, guid: dcc8f59b4042890488d0a91e1febd322,
         type: 3}
@@ -366,7 +366,7 @@ PrefabInstance:
     - target: {fileID: 500679072961611257, guid: 150a775b7529ae949889ccc9ed6856cc,
         type: 3}
       propertyPath: m_Convex
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 500679072961611257, guid: 150a775b7529ae949889ccc9ed6856cc,
         type: 3}

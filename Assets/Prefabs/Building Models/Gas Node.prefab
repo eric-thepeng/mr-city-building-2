@@ -60,25 +60,34 @@ VisualEffect:
       - m_Value: 1
         m_Name: ParticleAreaZ
         m_Overridden: 1
-      - m_Value: 4
+      - m_Value: 0
         m_Name: ParticleGravity
         m_Overridden: 1
+      - m_Value: 0.03
+        m_Name: ParticleSize
+        m_Overridden: 1
     m_Vector2f:
-      m_Array: []
+      m_Array:
+      - m_Value: {x: 2, y: 4}
+        m_Name: ParticleLifeMinMax
+        m_Overridden: 1
     m_Vector3f:
       m_Array:
-      - m_Value: {x: 0.5, y: 0.5, z: 0.5}
+      - m_Value: {x: 0.06, y: 0, z: 0.06}
         m_Name: ParticleSpawnArea
         m_Overridden: 1
     m_Vector4f:
       m_Array:
-      - m_Value: {x: 0.63895804, y: 0.8396226, z: 0.63895804, w: 1}
+      - m_Value: {x: 0.5669509, y: 0.48558202, z: 0.8773585, w: 1}
         m_Name: ParticleColor
         m_Overridden: 1
     m_Uint:
       m_Array: []
     m_Int:
-      m_Array: []
+      m_Array:
+      - m_Value: 4
+        m_Name: ParticleAmount
+        m_Overridden: 1
     m_Matrix4x4f:
       m_Array: []
     m_AnimationCurve:
@@ -96,19 +105,19 @@ VisualEffect:
             inWeight: 0
             outWeight: 0
           - serializedVersion: 3
-            time: 0.26235363
-            value: 0.38447464
-            inSlope: 0.544137
-            outSlope: 0.544137
-            tangentMode: 34
+            time: 0.1942001
+            value: 0.46481967
+            inSlope: 0.38341156
+            outSlope: 0.38341156
+            tangentMode: 0
             weightedMode: 0
             inWeight: 0.33333334
-            outWeight: 0.33333334
+            outWeight: 0.3426864
           - serializedVersion: 3
-            time: 0.6462207
-            value: 0.38599336
-            inSlope: -0.3929196
-            outSlope: -0.3929196
+            time: 0.53753126
+            value: 0.45735684
+            inSlope: -0.3903891
+            outSlope: -0.3903891
             tangentMode: 34
             weightedMode: 0
             inWeight: 0.33333334
