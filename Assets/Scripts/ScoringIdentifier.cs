@@ -73,6 +73,7 @@ public class ScoringIdentifier : MonoBehaviour
     private void AddScore()
     {
         MoneyManager.i.GainMoney(currentScore);
+        AudioManager.Instance.PlayClipMultipleTimes(3,2,0f);
         Destroy(flyingScoreGameObject);
     }
 

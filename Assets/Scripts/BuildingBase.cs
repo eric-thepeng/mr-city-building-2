@@ -53,7 +53,7 @@ public class BuildingBase : MonoBehaviour
         // Case: ERROR
         if (buildingState != BuildingState.ONGOING)
         {
-            Debug.LogError("Release GameObject when state is not ONGOING");
+            Debug.Log("Release GameObject when state is not ONGOING, current state is: " + buildingState);
             return;
         }
 
@@ -72,12 +72,14 @@ public class BuildingBase : MonoBehaviour
             mySI.canScore = true;
             CloseInfoUI();
             HandManager.i.ABuildingIsBuilt();
+            AudioManager.Instance.PlayClip(1,false);
         }
         // Case: Build Not Success
         else
         {
             ChangeDisplayState(true);
             ResetToWaiting();
+            AudioManager.Instance.PlayClip(2,false);
         }
     }
 
@@ -121,6 +123,11 @@ public class BuildingBase : MonoBehaviour
     void ChangeBuildingStateTo(BuildingState newBuildingState)
     {
         buildingState = newBuildingState;
+        if (newBuildingState == BuildingState.COMPLETE)
+        {
+            print("Building Built");
+            //transform.DOMove(transform.position, 1f);
+        }
     }
 
     private void Awake()
@@ -131,16 +138,20 @@ public class BuildingBase : MonoBehaviour
     private void Start()
     {
 
+        buildingState = BuildingState.WAITING;
+
         foreach (SupportBeam supportBeam in supportBeams)
         {
             supportBeam.SetUp(maxBeamLength);
         }
         uiText.text = mySI.GetBI().buildingName;
-
+    
         mySI.canScore = false;
         initialPosition = transform.position;
         
         ChangeDisplayState(true, true);
+        
+        
     }
 
     private void Update()
