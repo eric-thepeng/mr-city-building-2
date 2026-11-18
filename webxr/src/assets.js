@@ -2,6 +2,7 @@
 // Unity renderers (mesh + materials + transform) as three.js objects.
 import * as THREE from 'three';
 import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Unity (left-handed) mesh vertex -> three.js (right-handed) is a mirror on X
 // (Unity's FBX import) followed by our scene-wide mirror on Z. Together that is
@@ -145,6 +146,43 @@ export class AssetLibrary {
     return group;
   }
 }
+
+/**
+ * Like build(), but bakes static meshes into one mesh per material, which cuts
+ * draw calls. Multi-material meshes are kept as they are.
+ */
+AssetLibrary.prototype.buildMerged = function buildMerged(entries, opts = {}) {
+  const src = this.build(entries, opts);
+  src.updateMatrixWorld(true);
+  const buckets = new Map();
+  const out = new THREE.Group();
+  for (const mesh of [...src.children]) {
+    if (Array.isArray(mesh.material)) {
+      out.add(mesh);
+      continue;
+    }
+    const g = mesh.geometry;
+    const attrs = Object.keys(g.attributes).filter((a) => ['position', 'normal', 'uv', 'color'].includes(a)).sort();
+    const key = `${mesh.material.uuid}|${attrs.join(',')}`;
+    const geo = new THREE.BufferGeometry();
+    for (const a of attrs) geo.setAttribute(a, g.attributes[a]);
+    if (g.index) geo.setIndex(g.index);
+    const baked = (g.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(mesh.matrixWorld);
+    if (!buckets.has(key)) buckets.set(key, { material: mesh.material, geos: [] });
+    buckets.get(key).geos.push(baked);
+  }
+  for (const { material, geos } of buckets.values()) {
+    const merged = mergeGeometries(geos, false);
+    if (!merged) continue;
+    merged.computeBoundingSphere();
+    merged.computeBoundingBox();
+    out.add(new THREE.Mesh(merged, material));
+  }
+  // Rays (support beams, pointers) test the original pieces, which are small with
+  // tight bounds, instead of one terrain-sized mesh. They are never rendered.
+  out.userData.colliders = src;
+  return out;
+};
 
 function makeToonGradient() {
   const data = new Uint8Array([90, 170, 255]);

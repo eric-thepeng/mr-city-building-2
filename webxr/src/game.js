@@ -362,7 +362,7 @@ export class Game {
     this.data = data;
     this.assets = assets;
     this.scene = scene;
-    this.terrain = terrain;
+    this.terrain = terrain.userData.colliders ?? terrain;
     this.events = new THREE.EventDispatcher();
     this.raycaster = new THREE.Raycaster();
     this.buildings = [];

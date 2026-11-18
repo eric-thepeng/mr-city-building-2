@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { AssetLibrary } from './assets.js';
 import { Game } from './game.js';
 import { XRInput, MouseInput } from './input.js';
-import { updateBillboards } from './ui.js';
+import { Label, updateBillboards } from './ui.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -22,14 +22,26 @@ async function installEmulator() {
   }
 }
 
+const params = new URLSearchParams(location.search);
+// Snap Specs: see-through display, hands only, and fill rate is the main limit.
+// Snap's docs say to turn antialiasing off there. ?specs forces this profile on.
+const SPECS = params.has('specs') || /Spectacles|Snap ?OS/i.test(navigator.userAgent);
+// When the runtime has no 'local-floor', the 'local' origin is at the head.
+// Assume this eye height so the world still sits on the floor.
+const ASSUMED_EYE_HEIGHT = 1.55;
+
 async function main() {
-  if (new URLSearchParams(location.search).has('emulate')) await installEmulator();
+  if (params.has('emulate')) await installEmulator();
   const data = await (await fetch('data/game-data.json')).json();
   const assets = new AssetLibrary(data);
   await assets.load((p) => { $('progress').style.width = `${Math.round(p * 100)}%`; });
 
   // ---------------------------------------------------------------- renderer
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  const renderer = new THREE.WebGLRenderer({
+    antialias: !SPECS && !params.has('noaa'),
+    alpha: true,
+    powerPreference: 'high-performance',
+  });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -41,6 +53,11 @@ async function main() {
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 200);
   // the Unity rig starts at the origin facing +Z (three.js: -Z), eyes ~1.6 m up
   camera.position.set(0.05, 1.4, 0.3);
+  // The player rig. three.js applies the camera's parent transform to the XR pose.
+  const rig = new THREE.Group();
+  rig.name = 'Rig';
+  rig.add(camera);
+  scene.add(rig);
 
   // ---------------------------------------------------------------- lighting
   scene.add(new THREE.HemisphereLight(0xdfe9ff, 0x5a4636, 1.6));
@@ -56,7 +73,8 @@ async function main() {
   scene.fog = new THREE.Fog(0xbfd8f0, 8, 40);
 
   // ---------------------------------------------------------------- world
-  const terrain = assets.build(data.environment.static, { fallbackMat: 'MT_Terrain_01' });
+  // merged by material, so the 57 terrain pieces draw in a handful of calls
+  const terrain = assets.buildMerged(data.environment.static, { fallbackMat: 'MT_Terrain_01' });
   terrain.name = 'Terrain';
   scene.add(terrain);
 
@@ -73,28 +91,50 @@ async function main() {
   controls.maxDistance = 6;
   controls.update();
   const mouse = new MouseInput(camera, renderer.domElement, game, controls);
-  const xrInput = new XRInput(renderer, scene, game);
+  const xrInput = new XRInput(renderer, rig, game);
+
+  // In-world "New game" button under the budget board. Inside XR there is no HTML UI.
+  const newGame = new Label({ height: 0.03, bg: 'rgba(45,108,223,0.95)', billboard: false });
+  newGame.set('New game');
+  newGame.mesh.position.set(0, -0.075, 0);
+  newGame.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
+  game.money.anchor.add(newGame.mesh);
+  xrInput.addButton(newGame.mesh, () => game.restart());
 
   // ---------------------------------------------------------------- XR session
   let mode = null;
   const startSession = async (sessionMode) => {
+    // Only optional features: Spectacles documents immersive-ar + hands, but not
+    // 'local-floor'. Requiring a feature the runtime lacks would fail the request.
     const session = await navigator.xr.requestSession(sessionMode, {
-      requiredFeatures: ['local-floor'],
-      optionalFeatures: ['hand-tracking', 'bounded-floor'],
+      optionalFeatures: ['local-floor', 'hand-tracking', 'bounded-floor'],
     });
+    let floor = true;
+    try {
+      await session.requestReferenceSpace('local-floor');
+    } catch {
+      floor = false;
+    }
+    renderer.xr.setReferenceSpaceType(floor ? 'local-floor' : 'local');
     mode = sessionMode;
     const ar = sessionMode === 'immersive-ar';
     sky.visible = !ar;
     scene.fog = ar ? null : new THREE.Fog(0xbfd8f0, 8, 40);
+    xrInput.setHandModelsVisible(!ar);
     mouse.enabled = false;
     session.addEventListener('end', () => {
       mode = null;
+      rig.position.y = 0;
       sky.visible = true;
       scene.fog = new THREE.Fog(0xbfd8f0, 8, 40);
       mouse.enabled = true;
       document.body.classList.remove('in-xr');
     });
+    // Without a floor space the origin is at the head, so lift the rig (camera,
+    // hands and controllers) to put the player's eyes at a normal standing height.
+    rig.position.y = floor ? 0 : ASSUMED_EYE_HEIGHT;
     await renderer.xr.setSession(session);
+    window.__xrInfo = { mode: sessionMode, floor, blend: session.environmentBlendMode, enabled: session.enabledFeatures };
     document.body.classList.add('in-xr');
   };
 
@@ -109,7 +149,8 @@ async function main() {
   };
   await Promise.all([setupButton($('enter-ar'), 'immersive-ar'), setupButton($('enter-vr'), 'immersive-vr')]);
   if (!window.isSecureContext) $('xr-note').textContent = 'WebXR needs HTTPS (or localhost).';
-  else if (!navigator.xr) $('xr-note').textContent = 'This browser has no WebXR. Use the mouse to play, or open on a Quest.';
+  else if (!navigator.xr) $('xr-note').textContent = 'This browser has no WebXR. Use the mouse to play, or open on Specs / Quest.';
+  if (SPECS) document.body.classList.add('specs');
 
   $('restart').addEventListener('click', () => game.restart());
   $('loading').classList.add('hidden');

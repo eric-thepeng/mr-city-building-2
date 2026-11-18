@@ -1,0 +1,12 @@
+// Cloudflare Worker (static assets only) that serves the WebXR build at
+// https://mars.pengguo.net. Deploy from the repo root with:  npx wrangler deploy
+{
+  "name": "mr-city-building-webxr",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./webxr"
+  },
+  "routes": [
+    { "pattern": "mars.pengguo.net", "custom_domain": true }
+  ]
+}
