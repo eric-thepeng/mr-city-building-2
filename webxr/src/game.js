@@ -60,7 +60,7 @@ class HandManager {
     let i = 0;
     for (const [key, count] of Object.entries(this.preset.buildings)) {
       for (let n = 0; n < count; n++) {
-        const pos = spawn.clone().add(new THREE.Vector3(spacing * (i - (total - 1) / 2), 0, 0));
+        const pos = spawn.clone().setX(spawn.x + spacing * (i - (total - 1) / 2));
         this.game.addBuilding(new Building(this.game, key, { position: pos }));
         i++;
       }
@@ -422,6 +422,8 @@ export class Game {
     this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
     this.colliderMaterial = new THREE.MeshBasicMaterial({ visible: false });
     this.gasGeometry = new THREE.SphereGeometry(1, 8, 6);
+    // every gas puff is in step, so they all share one material
+    this.gasMaterial = new THREE.MeshBasicMaterial({ color: 0x9cf5c4, transparent: true, opacity: 0.5, depthWrite: false });
     this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
     this.infoPanel.visible = false;
 
@@ -568,9 +570,7 @@ function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2)
 function makeGasVfx(game) {
   const group = new THREE.Group();
   const puffs = [0].map((phase) => {
-    const m = new THREE.Mesh(game.gasGeometry, new THREE.MeshBasicMaterial({
-      color: 0x9cf5c4, transparent: true, opacity: 0.5, depthWrite: false,
-    }));
+    const m = new THREE.Mesh(game.gasGeometry, game.gasMaterial);
     m.raycast = () => {};
     group.add(m);
     return { m, phase };

@@ -51,13 +51,16 @@ Specs stops apps that use too much memory ("App Stopped: high memory used"), so 
 | Support-beam ground test | raycast against the terrain mesh | O(1) lookup in `data/board.json` |
 | Resource nodes | 36 separate models | merged into one mesh per material |
 | Textures | two 1024² atlases | two 256² atlases |
-| Labels | 119 canvas textures (5.4 MPx), a new texture whenever the text changes | made on first use, redrawn in place, no mipmaps (~8 textures) |
+| Labels | 119 canvases + textures (5.4 MPx), a new texture whenever the text changes | one shared canvas; each label is only a small texture, made on first use, no mipmaps |
 | Red "can't build" model | a second copy of every building | made only when first needed |
-| Hand / controller meshes | downloaded from a CDN | not loaded on Specs |
-| XR resolution | 100% | 75% on Specs (`?fb=1` overrides) |
+| Hand / controller meshes | downloaded from a CDN | not loaded on Specs (the code isn't even fetched) |
+| XR resolution | 100% | 60% on Specs (`?fb=1` overrides) |
+| Page canvas during XR | three.js resizes it to the full XR frame size, so the frame memory is held twice | shrunk to 1×1 while presenting |
+| Sky and fog | switched off when AR starts, which compiles every shader a second time | never created on Specs |
+| three.js | unminified build (1.3 MB of source) | minified build |
 
 Measured in desktop Chrome: 27 draw calls (was 84), geometry 13.1 MB → under 1 MB, JS heap 38 MB → 10 MB.
-The pointer and support-beam code also no longer creates garbage every frame (GC pauses cause stutter).
+The pointer, grab-rotation and support-beam code no longer creates garbage every frame (GC pauses cause stutter).
 
 ## Run it
 

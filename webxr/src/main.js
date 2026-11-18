@@ -39,14 +39,16 @@ async function main() {
     alpha: true,
     powerPreference: 'high-performance',
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  // Specs: the flat page is only a launcher, so keep its canvas at 1x
+  renderer.setPixelRatio(SPECS ? 1 : Math.min(window.devicePixelRatio, 2));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.xr.enabled = true;
-  // Specs: render the XR views at 75% resolution (less memory, less fill); ?fb=1 to override
-  const fb = Number(params.get('fb')) || (SPECS ? 0.75 : 1);
+  // Specs: render the XR views at 60% resolution (less memory, less fill); ?fb=1 to override
+  const fb = Number(params.get('fb')) || (SPECS ? 0.6 : 1);
   renderer.xr.setFramebufferScaleFactor(fb);
   if (SPECS) Label.resolution = 1;
+  Label.renderer = renderer; // labels share one canvas and upload through the renderer
   renderer.xr.setReferenceSpaceType('local-floor');
   $('app').appendChild(renderer.domElement);
 
@@ -69,9 +71,12 @@ async function main() {
   scene.add(sun);
 
   // ---------------------------------------------------------------- sky
-  const sky = makeSky();
-  scene.add(sky);
-  scene.fog = new THREE.Fog(0xbfd8f0, 2.5, 6);
+  // Only for VR / desktop. Specs is AR-only, so it gets neither sky nor fog: switching
+  // fog off when AR starts would compile every shader a second time.
+  const sky = SPECS ? null : makeSky();
+  if (sky) scene.add(sky);
+  const fog = SPECS ? null : new THREE.Fog(0xbfd8f0, 2.5, 6);
+  scene.fog = fog;
 
   // ---------------------------------------------------------------- world
   // the sandbox terrain, baked from the Unity landscape (see tools/bake.js)
@@ -127,16 +132,16 @@ async function main() {
     renderer.xr.setReferenceSpaceType(floor ? 'local-floor' : 'local');
     mode = sessionMode;
     const ar = sessionMode === 'immersive-ar';
-    sky.visible = !ar;
-    scene.fog = ar ? null : new THREE.Fog(0xbfd8f0, 2.5, 6);
+    if (sky) sky.visible = !ar;
+    scene.fog = ar ? null : fog;
     xrInput.setHandModelsVisible(!ar);
     mouse.enabled = false;
     session.addEventListener('end', () => {
       mode = null;
       rig.position.y = 0;
       game.placeBoard(DESK_BOARD, 0);
-      sky.visible = true;
-      scene.fog = new THREE.Fog(0xbfd8f0, 2.5, 6);
+      if (sky) sky.visible = true;
+      scene.fog = fog;
       mouse.enabled = true;
       document.body.classList.remove('in-xr');
     });
@@ -144,6 +149,11 @@ async function main() {
     // hands and controllers) to put the player's eyes at a normal standing height.
     rig.position.y = floor ? 0 : ASSUMED_EYE_HEIGHT;
     await renderer.xr.setSession(session);
+    // three.js resizes the page canvas to the full XR framebuffer while presenting,
+    // although nothing is drawn to it then. Shrink its buffer so the frame memory isn't
+    // held twice; three.js restores the size when the session ends.
+    renderer.domElement.width = 1;
+    renderer.domElement.height = 1;
     needsPlacement = true; // put the sandbox in front of the player once the head is tracked
     xrFrames = 0;
     window.__xrInfo = { mode: sessionMode, floor, blend: session.environmentBlendMode, enabled: session.enabledFeatures };

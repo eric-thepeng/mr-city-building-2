@@ -1,8 +1,6 @@
 // Grabbing for WebXR controllers / hands and for mouse on desktop.
 // Replaces XR Interaction Toolkit's XRGrabInteractable + ray/direct interactors.
 import * as THREE from 'three';
-import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
-import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 
 const DIRECT_GRAB_RADIUS = 0.04;
 // Pinch detection by joint distance. This works on Spectacles, where hands are the
@@ -17,9 +15,14 @@ const tmpBox = new THREE.Box3();
 const tmpP = new THREE.Vector3();
 const tmpPinch = new THREE.Vector3();
 const ONE = new THREE.Vector3(1, 1, 1);
-const yawOnly = (q) => {
-  const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
-  return new THREE.Quaternion().setFromEuler(new THREE.Euler(0, e.y, 0, 'YXZ'));
+const tmpQ2 = new THREE.Quaternion();
+const tmpE = new THREE.Euler();
+const targets = []; // reused ray target list
+/** Writes the yaw part of q into target (no allocation). */
+const yawOnly = (q, target) => {
+  tmpE.setFromQuaternion(q, 'YXZ');
+  tmpE.set(0, tmpE.y, 0, 'YXZ');
+  return target.setFromEuler(tmpE);
 };
 
 /**
@@ -27,19 +30,12 @@ const yawOnly = (q) => {
  * or for a hand grabbing up close, the pinch point between thumb and index tips.
  */
 class Pointer {
-  constructor(index, renderer, controllerModels, handModels) {
+  constructor(index, renderer) {
     this.index = index;
     this.controller = renderer.xr.getController(index);
     this.grip = renderer.xr.getControllerGrip(index);
     this.hand = renderer.xr.getHand(index);
     this.handModel = null;
-    // Controller / hand meshes are downloaded from a CDN when an input connects.
-    // They are skipped on Specs (no controllers; you see your own hands).
-    if (controllerModels) this.grip.add(controllerModels.createControllerModel(this.grip));
-    if (handModels) {
-      this.handModel = handModels.createHandModel(this.hand, 'mesh');
-      this.hand.add(this.handModel);
-    }
     this.line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]),
       new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }),
@@ -89,7 +85,7 @@ class Pointer {
     if (this.grabMode === 'pinch' && this.hasJoints) {
       const p = this.pinchPoint(tmpPinch);
       const wrist = this.hand.joints.wrist;
-      const q = wrist ? yawOnly(wrist.getWorldQuaternion(tmpQ)) : tmpQ.identity();
+      const q = wrist ? yawOnly(wrist.getWorldQuaternion(tmpQ), tmpQ) : tmpQ.identity();
       return target.compose(p, q, ONE);
     }
     return target.copy(this.controller.matrixWorld);
@@ -107,10 +103,8 @@ export class XRInput {
     this.game = game;
     this.raycaster = new THREE.Raycaster();
     this.buttons = []; // { mesh, onPress }
-    const controllerModels = models ? new XRControllerModelFactory() : null;
-    const handModels = models ? new XRHandModelFactory() : null;
     this.hands = [0, 1].map((i) => {
-      const s = new Pointer(i, renderer, controllerModels, handModels);
+      const s = new Pointer(i, renderer);
       s.controller.addEventListener('connected', (e) => {
         s.inputSource = e.data;
         s.line.visible = e.data.targetRayMode === 'tracked-pointer';
@@ -130,10 +124,31 @@ export class XRInput {
       parent.add(s.controller, s.grip, s.hand, s.cursor); // parent: the player rig
       return s;
     });
+    if (models) this._loadModels();
+  }
+
+  /**
+   * Controller / hand meshes (Quest). The modules and meshes are only fetched when
+   * wanted; on Specs they are never loaded (no controllers, you see your own hands).
+   */
+  async _loadModels() {
+    const [{ XRControllerModelFactory }, { XRHandModelFactory }] = await Promise.all([
+      import('three/addons/webxr/XRControllerModelFactory.js'),
+      import('three/addons/webxr/XRHandModelFactory.js'),
+    ]);
+    const controllerModels = new XRControllerModelFactory();
+    const handModels = new XRHandModelFactory();
+    for (const s of this.hands) {
+      s.grip.add(controllerModels.createControllerModel(s.grip));
+      s.handModel = handModels.createHandModel(s.hand, 'mesh');
+      s.handModel.visible = this._handModelsVisible ?? true;
+      s.hand.add(s.handModel);
+    }
   }
 
   /** Show hand meshes in VR. In AR the real hands are already visible. */
   setHandModelsVisible(v) {
+    this._handModelsVisible = v;
     for (const s of this.hands) if (s.handModel) s.handModel.visible = v;
   }
 
@@ -168,8 +183,10 @@ export class XRInput {
     }
     if (best) return best;
     const ray = this._rayFrom(s);
-    const buttonMeshes = this.buttons.filter((b) => b.mesh.visible).map((b) => b.mesh);
-    const hit = ray.intersectObjects([...colliders, ...buttonMeshes], false)[0];
+    targets.length = 0;
+    for (const c of colliders) targets.push(c);
+    for (const b of this.buttons) if (b.mesh.visible) targets.push(b.mesh);
+    const hit = ray.intersectObjects(targets, false)[0];
     if (!hit) return null;
     const btn = this.buttons.find((b) => b.mesh === hit.object);
     return btn
@@ -199,7 +216,7 @@ export class XRInput {
     s.controller.updateMatrixWorld();
     const pose = s.currentPose(s.pose);
     s.localPos.copy(b.root.getWorldPosition(tmpV)).applyMatrix4(tmpM.copy(pose).invert());
-    s.yawStart.copy(yawOnly(new THREE.Quaternion().setFromRotationMatrix(pose)));
+    yawOnly(tmpQ2.setFromRotationMatrix(pose), s.yawStart);
     s.objYawStart.copy(b.root.quaternion);
     this._pulse(s, 0.4, 30);
   }
@@ -247,8 +264,8 @@ export class XRInput {
         }
         const pose = s.currentPose(s.pose);
         this.game.setWorldPosition(b, tmpV.copy(s.localPos).applyMatrix4(pose));
-        const yawNow = yawOnly(new THREE.Quaternion().setFromRotationMatrix(pose));
-        b.root.quaternion.copy(yawNow.multiply(s.yawStart.clone().invert()).multiply(s.objYawStart));
+        const yawNow = yawOnly(tmpQ2.setFromRotationMatrix(pose), tmpQ2);
+        b.root.quaternion.copy(tmpQ.copy(s.yawStart).invert()).premultiply(yawNow).multiply(s.objYawStart);
         s.line.scale.z = s.grabMode === 'ray' ? s.localPos.length() : 0.05;
         s.cursor.visible = false;
         continue;

@@ -2,13 +2,21 @@
 import * as THREE from 'three';
 
 const PLANE = new THREE.PlaneGeometry(1, 1);
+const FONT = 'system-ui, -apple-system, Segoe UI, sans-serif';
+// One scratch canvas for every label. A label draws into it and is uploaded to its
+// own GPU texture right away, so labels keep no canvas or 2D context of their own
+// (one canvas instead of ~50 on a full board).
+let scratch = null;
+let scratchCtx = null;
 
 export class Label {
   /** Canvas pixels per text pixel. Lowered on memory-tight devices (Specs). */
   static resolution = 1.5;
+  /** Set by main.js. Labels upload through it; without it each label keeps its own canvas. */
+  static renderer = null;
 
   /**
-   * Labels are lazy: no canvas or GPU texture exists until set() is first called.
+   * Labels are lazy: no GPU texture exists until set() is first called.
    * @param {object} opts
    * @param {number} opts.height   world height of one text line in metres
    * @param {string} opts.bg       CSS background colour
@@ -20,8 +28,10 @@ export class Label {
     this.bg = bg;
     this.fg = fg;
     this.font = font;
-    this.canvas = null;
+    this.canvas = null; // only used when there is no renderer to upload through
     this.texture = null;
+    this.texW = 0; // allocated texture size in pixels
+    this.texH = 0;
     const mat = new THREE.MeshBasicMaterial({ transparent: true, depthTest, depthWrite: false, toneMapped: false });
     this.mesh = new THREE.Mesh(PLANE, mat);
     this.mesh.renderOrder = renderOrder;
@@ -38,28 +48,44 @@ export class Label {
     const key = `${text}|${fg}|${bg}`;
     if (key === this.text) return this;
     this.text = key;
-    this.canvas ??= document.createElement('canvas');
-    this.ctx ??= this.canvas.getContext('2d');
+    const shared = !!Label.renderer;
+    let canvas;
+    let ctx;
+    if (shared) {
+      scratch ??= document.createElement('canvas');
+      scratchCtx ??= scratch.getContext('2d');
+      canvas = scratch;
+      ctx = scratchCtx;
+    } else {
+      this.canvas ??= document.createElement('canvas');
+      canvas = this.canvas;
+      ctx = canvas.getContext('2d');
+    }
     const DPR = Label.resolution;
     const lines = String(text).split('\n');
-    const px = 32 * DPR;
-    const ctx = this.ctx;
-    ctx.font = `${this.font} ${px}px system-ui, -apple-system, Segoe UI, sans-serif`;
+    const px = Math.round(32 * DPR);
+    const font = `${this.font} ${px}px ${FONT}`;
+    ctx.font = font;
     const pad = 16 * DPR;
     const lineH = px * 1.2;
-    const w = Math.ceil(Math.max(...lines.map((l) => ctx.measureText(l).width)) + pad * 2);
+    let textW = 0;
+    for (const l of lines) textW = Math.max(textW, ctx.measureText(l).width);
+    const w = Math.ceil(textW + pad * 2);
     const h = Math.ceil(lineH * lines.length + pad * 1.2);
-    // Reuse the canvas and GPU texture when the new text fits (a cost label changes
-    // many times a second while carrying a building). Only grow when needed.
-    const grow = !this.texture || w > this.canvas.width || h > this.canvas.height;
+    // Reuse the GPU texture when the new text fits (a cost label changes many
+    // times a second while carrying a building). Only grow when needed.
+    const grow = !this.texture || w > this.texW || h > this.texH;
     if (grow) {
-      this.canvas.width = Math.max(w, this.texture ? this.canvas.width : 0);
-      this.canvas.height = Math.max(h, this.texture ? this.canvas.height : 0);
+      this.texW = Math.max(w, this.texW);
+      this.texH = Math.max(h, this.texH);
     }
-    const cw = this.canvas.width;
-    const ch = this.canvas.height;
+    const cw = this.texW;
+    const ch = this.texH;
+    // the uploaded image must match the texture's allocated size exactly
+    if (canvas.width !== cw) canvas.width = cw;
+    if (canvas.height !== ch) canvas.height = ch;
     ctx.clearRect(0, 0, cw, ch);
-    ctx.font = `${this.font} ${px}px system-ui, -apple-system, Segoe UI, sans-serif`;
+    ctx.font = font;
     ctx.fillStyle = bg;
     roundRect(ctx, 0, 0, w, h, 14 * DPR);
     ctx.fill();
@@ -69,20 +95,21 @@ export class Label {
     lines.forEach((l, i) => ctx.fillText(l, w / 2, pad * 0.6 + lineH * (i + 0.5)));
     if (grow) {
       this.texture?.dispose();
-      this.texture = new THREE.CanvasTexture(this.canvas);
+      this.texture = new THREE.Texture(canvas);
       this.texture.colorSpace = THREE.SRGBColorSpace;
       this.texture.generateMipmaps = false; // a third less memory; labels are viewed up close
       this.texture.minFilter = THREE.LinearFilter;
       this.mesh.material.map = this.texture;
       this.mesh.material.needsUpdate = true;
-    } else {
-      this.texture.needsUpdate = true;
     }
-    // show only the drawn w x h corner of the canvas (top-left; textures are flipped in Y)
+    this.texture.image = canvas;
+    this.texture.needsUpdate = true;
+    // upload now, before another label redraws the scratch canvas
+    if (shared) Label.renderer.initTexture(this.texture);
+    // show only the drawn w x h corner of the texture (top-left; textures are flipped in Y)
     this.texture.repeat.set(w / cw, h / ch);
     this.texture.offset.set(0, 1 - h / ch);
-    const lineWorld = this.height;
-    const worldH = lineWorld * (h / lineH);
+    const worldH = this.height * (h / lineH);
     this.mesh.scale.set(worldH * (w / h), worldH, 1);
     this.mesh.visible = this.wanted;
     return this;
@@ -98,6 +125,8 @@ export class Label {
 
   dispose() {
     this.texture?.dispose();
+    this.texture = null;
+    this.canvas = null;
     this.mesh.material.dispose();
   }
 }
