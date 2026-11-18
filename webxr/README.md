@@ -22,9 +22,25 @@ Notes for Specs, from Snap's WebXR guidance:
   The game doesn't depend on `select` events.
 - Antialiasing is off on Specs, because fill rate is the limit. The profile is picked from the user agent;
   add `?specs` to force it on.
-- The terrain is merged into one mesh per material, to keep draw calls low.
 - In AR, the sky, fog and virtual hand meshes are hidden. The world-space **New game** button sits under
   the budget board.
+
+### Memory budget (Specs)
+
+Specs stops apps that use too much memory ("App Stopped: high memory used"), so the game is kept small:
+
+| | Before | Now |
+|---|---|---|
+| Models | 33 FBX files parsed on the device | one pre-baked `data/world.glb` (1.3 MB) |
+| Terrain | 57 Unity pieces, 133k triangles, kept twice for rendering + collisions | 81×81 heightfield, 12.8k triangles, 6 × 6 m around the player |
+| Support-beam ground test | raycast against the terrain mesh | O(1) lookup in `data/terrain.json` |
+| Textures | two 1024² atlases | two 256² atlases |
+| Labels | 119 canvas textures (5.4 MPx) | made on first use, no mipmaps, one shared hover panel (~8 textures) |
+| Red "can't build" model | a second copy of every building | made only when first needed |
+| Hand / controller meshes | downloaded from a CDN | not loaded on Specs |
+| XR resolution | 100% | 75% on Specs (`?fb=1` overrides) |
+
+Measured in desktop Chrome: geometry 13.1 MB → 0.74 MB, JS heap 38 MB → 22 MB.
 
 ## Run it
 
@@ -37,7 +53,8 @@ Then open <http://localhost:8123>.
 - **Desktop:** drag buildings with the mouse. The scroll wheel sets the height, Q/E rotates, and dragging empty space orbits the camera.
 - **No headset?** Open <http://localhost:8123/?emulate>. This installs Meta's
   [Immersive Web Emulation Runtime](https://github.com/meta-quest/immersive-web-emulation-runtime),
-  an emulated Quest 3, so you can use *Enter VR* / *Enter MR* in a normal browser.
+  an emulated Quest 3, so you can use *Enter VR* / *Enter AR* in a normal browser. Drive it from the
+  console through `window.__xrDevice`. Add `&specs` to try the Specs profile.
 - **On a device:** WebXR needs HTTPS. Open <https://mars.pengguo.net>. On Specs, open the Browser from
   Lens Explorer. For local builds on a Quest, you can also run `adb reverse tcp:8123 tcp:8123` and open
   `http://localhost:8123`.
@@ -51,14 +68,14 @@ The site is a Cloudflare Worker that serves `webxr/` as static assets on the cus
 npx wrangler deploy
 ```
 
-`webxr/.assetsignore` keeps `tools/` and this README off the site.
+`webxr/.assetsignore` keeps `tools/`, the FBX sources in `assets/`, and this README off the site.
 
 ## How it maps to the Unity project
 
 | Unity (`Assets/Scripts`)                          | WebXR (`webxr/src`)                                        |
 |---------------------------------------------------|------------------------------------------------------------|
 | `BuildingBase.cs`                                 | `Building` in `game.js`: states, cost, release / reset     |
-| `SupportBeam.cs`                                  | `Building.calculateSupportBeam` (downward raycast per beam) |
+| `SupportBeam.cs`                                  | `Building.calculateSupportBeam` (heightfield + short ray per beam) |
 | `ScoringIdentifier.cs`                            | `Building.calculateScoring` / `sendAndAddScore`            |
 | `HandManager.cs` + `SO_HandPreset`                | `HandManager` in `game.js`                                 |
 | `MoneyManager.cs`                                 | `MoneyManager` in `game.js` (starting budget 100)          |
@@ -68,15 +85,23 @@ npx wrangler deploy
 | `Environment.prefab` (terrain + resource nodes)   | `environment` in `data/game-data.json`                     |
 
 The data is **exported from the Unity assets**, not hand-copied. If you change a prefab, a
-ScriptableObject, or the environment in Unity, regenerate it:
+ScriptableObject, or the environment in Unity, regenerate it in two steps:
 
 ```bash
 python webxr/tools/export_game_data.py
 ```
 
-The export reads the prefab/scene YAML (`tools/unity_yaml.py`) and the Odin-serialized
-scoring tables and hand presets. It converts Unity's left-handed transforms to three.js, writes
-`data/game-data.json`, and copies the FBX models and textures it needs into `assets/`.
+This reads the prefab/scene YAML (`tools/unity_yaml.py`) and the Odin-serialized scoring tables and
+hand presets, and converts Unity's left-handed transforms to three.js. It writes `data/game-data.json`,
+copies the FBX sources into `assets/`, and writes 256 px textures to `data/textures/`.
+
+```bash
+python webxr/tools/bake_server.py
+```
+
+Then open <http://localhost:8124/tools/bake.html>. The page loads the FBX files once and writes
+`data/world.glb` (all building and resource models) and `data/terrain.json` (the simplified heightfield).
+To change the terrain's area or detail, edit `TERRAIN` at the top of `tools/bake.js` and bake again.
 
 ## Differences from the Unity build
 

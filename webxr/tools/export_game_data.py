@@ -91,6 +91,20 @@ def asset(path):
     return copied[path]
 
 
+TEXTURE_SIZE = 256  # the KayKit atlases are flat colour swatches; 256 px is plenty
+
+
+def small_texture(path):
+    """Write a downscaled copy of a texture to webxr/data/textures and return its web path."""
+    from PIL import Image  # pip install pillow
+    name = os.path.basename(path).replace(' ', '_')
+    dst = os.path.join(OUT, 'data', 'textures', name)
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    with Image.open(os.path.join(ROOT, path)) as im:
+        im.convert('RGB').resize((TEXTURE_SIZE, TEXTURE_SIZE), Image.LANCZOS).save(dst, optimize=True)
+    return 'data/textures/' + name
+
+
 def material_info(path):
     if not path or not path.endswith('.mat'):
         return None
@@ -103,7 +117,7 @@ def material_info(path):
     m = re.search(r'- _AlbedoMap:\s*\n\s*m_Texture: \{fileID: \d+, guid: (\w+)', t) or \
         re.search(r'- _BaseMap:\s*\n\s*m_Texture: \{fileID: \d+, guid: (\w+)', t)
     if m and m.group(1) in uy.G2P:
-        tex = asset(uy.G2P[m.group(1)])
+        tex = small_texture(uy.G2P[m.group(1)])
     return {'name': name, 'color': [float(x) for x in col.groups()] if col else [1, 1, 1, 1], 'map': tex}
 
 

@@ -8,18 +8,12 @@ import { Label, updateBillboards } from './ui.js';
 const $ = (id) => document.getElementById(id);
 
 // ?emulate  -> install Meta's Immersive Web Emulation Runtime (a Quest 3 in the
-// browser, with an on-screen control panel) so XR can be tried without a headset.
+// browser) so XR can be tried without a headset; drive it from the console via window.__xrDevice.
 async function installEmulator() {
   const { XRDevice, metaQuest3 } = await import('https://cdn.jsdelivr.net/npm/iwer@2.7.0/+esm');
   const device = new XRDevice(metaQuest3);
   device.installRuntime({ forceInstall: true });
   window.__xrDevice = device;
-  try {
-    const { DevUI } = await import('https://esm.sh/@iwer/devui@2.7.0');
-    new DevUI(device);
-  } catch (err) {
-    console.warn('IWER DevUI unavailable', err);
-  }
 }
 
 const params = new URLSearchParams(location.search);
@@ -46,6 +40,10 @@ async function main() {
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.xr.enabled = true;
+  // Specs: render the XR views at 75% resolution (less memory, less fill); ?fb=1 to override
+  const fb = Number(params.get('fb')) || (SPECS ? 0.75 : 1);
+  renderer.xr.setFramebufferScaleFactor(fb);
+  if (SPECS) Label.resolution = 1;
   renderer.xr.setReferenceSpaceType('local-floor');
   $('app').appendChild(renderer.domElement);
 
@@ -70,11 +68,11 @@ async function main() {
   // ---------------------------------------------------------------- sky
   const sky = makeSky();
   scene.add(sky);
-  scene.fog = new THREE.Fog(0xbfd8f0, 8, 40);
+  scene.fog = new THREE.Fog(0xbfd8f0, 2.5, 6);
 
   // ---------------------------------------------------------------- world
-  // merged by material, so the 57 terrain pieces draw in a handful of calls
-  const terrain = assets.buildMerged(data.environment.static, { fallbackMat: 'MT_Terrain_01' });
+  // simplified, baked heightfield terrain (see tools/bake.js)
+  const terrain = assets.terrain();
   terrain.name = 'Terrain';
   scene.add(terrain);
 
@@ -91,7 +89,7 @@ async function main() {
   controls.maxDistance = 6;
   controls.update();
   const mouse = new MouseInput(camera, renderer.domElement, game, controls);
-  const xrInput = new XRInput(renderer, rig, game);
+  const xrInput = new XRInput(renderer, rig, game, { models: !SPECS });
 
   // In-world "New game" button under the budget board. Inside XR there is no HTML UI.
   const newGame = new Label({ height: 0.03, bg: 'rgba(45,108,223,0.95)', billboard: false });
@@ -119,14 +117,14 @@ async function main() {
     mode = sessionMode;
     const ar = sessionMode === 'immersive-ar';
     sky.visible = !ar;
-    scene.fog = ar ? null : new THREE.Fog(0xbfd8f0, 8, 40);
+    scene.fog = ar ? null : new THREE.Fog(0xbfd8f0, 2.5, 6);
     xrInput.setHandModelsVisible(!ar);
     mouse.enabled = false;
     session.addEventListener('end', () => {
       mode = null;
       rig.position.y = 0;
       sky.visible = true;
-      scene.fog = new THREE.Fog(0xbfd8f0, 8, 40);
+      scene.fog = new THREE.Fog(0xbfd8f0, 2.5, 6);
       mouse.enabled = true;
       document.body.classList.remove('in-xr');
     });

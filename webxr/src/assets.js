@@ -1,62 +1,34 @@
-// Loads the FBX models exported from the Unity project and rebuilds
-// Unity renderers (mesh + materials + transform) as three.js objects.
+// Loads the pre-baked world (data/world.glb + data/terrain.json, made by
+// tools/bake.html from the Unity FBX assets) and hands out building / resource
+// models with the game's materials.
 import * as THREE from 'three';
-import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-
-// Unity (left-handed) mesh vertex -> three.js (right-handed) is a mirror on X
-// (Unity's FBX import) followed by our scene-wide mirror on Z. Together that is
-// a 180° turn around Y, plus the FBX unit scale Unity applies on import.
-function importFix(k) {
-  return new THREE.Matrix4().makeScale(-k, k, -k);
-}
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const ERROR_TINT = new THREE.Color(1, 0.29, 0.29);
 
 export class AssetLibrary {
   constructor(data) {
     this.data = data;
-    this.fbx = new Map(); // web path -> THREE.Group
     this.textures = new Map();
     this.materials = new Map();
     this.gradient = makeToonGradient();
+    this.world = null;
+    this.heightfield = null;
   }
 
   async load(onProgress = () => {}) {
-    const paths = new Set();
-    const collect = (list) => list.forEach((r) => paths.add(r.fbx));
-    collect(this.data.environment.static);
-    this.data.environment.resources.forEach((r) => collect(r.meshes));
-    Object.values(this.data.blocks).forEach((b) => collect(b.meshes));
-
-    const texPaths = new Set(
-      Object.values(this.data.materials).map((m) => m.map).filter(Boolean),
-    );
-
-    // FBX files reference their textures next to themselves; ours live in assets/Textures
-    // (and the materials are rebuilt from the Unity .mat data anyway).
-    const manager = new THREE.LoadingManager();
-    manager.setURLModifier((url) =>
-      /\.(png|jpe?g|tga)$/i.test(url) && !url.includes('/Textures/') && !url.startsWith('data:') && !url.startsWith('blob:')
-        ? `assets/Textures/${url.split('/').pop()}`
-        : url);
-    const loader = new FBXLoader(manager);
-    const texLoader = new THREE.TextureLoader();
-    const total = paths.size + texPaths.size;
+    const texPaths = [...new Set(Object.values(this.data.materials).map((m) => m.map).filter(Boolean))];
+    const total = texPaths.length + 2;
     let done = 0;
     const tick = () => onProgress(++done / total);
-
+    const texLoader = new THREE.TextureLoader();
     await Promise.all([
-      ...[...paths].map(async (p) => {
-        const obj = await loader.loadAsync(p);
-        obj.updateMatrixWorld(true);
-        this.fbx.set(p, obj);
-        tick();
-      }),
-      ...[...texPaths].map(async (p) => {
+      new GLTFLoader().loadAsync('data/world.glb').then((g) => { this.world = g.scene; tick(); }),
+      fetch('data/terrain.json').then((r) => r.json()).then((h) => { this.heightfield = new Heightfield(h); tick(); }),
+      ...texPaths.map(async (p) => {
         const tex = await texLoader.loadAsync(p);
         tex.colorSpace = THREE.SRGBColorSpace;
-        tex.flipY = true;
+        tex.flipY = true; // the baked UVs keep three.js (FBX) orientation
         this.textures.set(p, tex);
         tick();
       }),
@@ -66,123 +38,80 @@ export class AssetLibrary {
   material(name, { error = false, vertexColors = false } = {}) {
     const key = `${name}|${error}|${vertexColors}`;
     if (this.materials.has(key)) return this.materials.get(key);
-    const def = this.data.materials[name] || { color: [1, 1, 1, 1], map: null };
-    const color = new THREE.Color().setRGB(def.color[0], def.color[1], def.color[2], THREE.SRGBColorSpace);
-    if (error) color.multiply(ERROR_TINT);
-    const alpha = def.color[3];
-    const mat = new THREE.MeshToonMaterial({
-      color,
-      map: def.map ? this.textures.get(def.map) : null,
-      gradientMap: this.gradient,
-      vertexColors,
-      transparent: alpha < 0.99,
-      opacity: alpha < 0.99 ? Math.max(alpha, 0.25) : 1,
-      depthWrite: alpha >= 0.99,
-    });
+    let mat;
+    if (name === 'Terrain') {
+      // cheap faceted look; toon materials have no flatShading
+      mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+    } else {
+      const def = this.data.materials[name] || { color: [1, 1, 1, 1], map: null };
+      const color = new THREE.Color().setRGB(def.color[0], def.color[1], def.color[2], THREE.SRGBColorSpace);
+      if (error) color.multiply(ERROR_TINT);
+      const alpha = def.color[3];
+      mat = new THREE.MeshToonMaterial({
+        color,
+        map: def.map ? this.textures.get(def.map) : null,
+        gradientMap: this.gradient,
+        vertexColors,
+        transparent: alpha < 0.99,
+        opacity: alpha < 0.99 ? Math.max(alpha, 0.25) : 1,
+        depthWrite: alpha >= 0.99,
+      });
+    }
     mat.name = name;
     this.materials.set(key, mat);
     return mat;
   }
 
-  /** Meshes (with transforms relative to the FBX root) for one renderer entry. */
-  _sourceMeshes(entry) {
-    const root = this.fbx.get(entry.fbx);
-    const meshes = [];
-    let node = null;
-    if (entry.node) {
-      const wanted = THREE.PropertyBinding.sanitizeNodeName(entry.node);
-      root.traverse((o) => {
-        if (!node && (o.name === entry.node || o.name === wanted)) node = o;
-      });
-    }
-    if (node && node.isMesh) {
-      // A Unity MeshFilter references exactly this node's mesh, in its local space.
-      meshes.push({ mesh: node, matrix: new THREE.Matrix4() });
-    } else {
-      const all = [];
-      root.traverse((o) => o.isMesh && all.push(o));
-      if (entry.node && all.length === 1) {
-        meshes.push({ mesh: all[0], matrix: new THREE.Matrix4() });
-      } else {
-        const base = node || root;
-        const baseInv = new THREE.Matrix4().copy(base.matrixWorld).invert();
-        base.traverse((o) => {
-          if (o.isMesh) meshes.push({ mesh: o, matrix: baseInv.clone().multiply(o.matrixWorld) });
-        });
-      }
-    }
-    return meshes;
+  /** A copy of a baked model (geometry shared) with the game's materials applied. */
+  instance(nodeName, { error = false } = {}) {
+    const src = this.world.getObjectByName(nodeName);
+    if (!src) return new THREE.Group();
+    const copy = src.clone(true);
+    copy.position.set(0, 0, 0);
+    copy.quaternion.identity();
+    copy.scale.set(1, 1, 1);
+    copy.traverse((o) => {
+      if (!o.isMesh) return;
+      const vc = !!o.geometry.attributes.color;
+      o.material = this.material(o.material.name, { error, vertexColors: vc && o.material.name !== 'Terrain' ? true : false });
+      o.raycast = THREE.Mesh.prototype.raycast;
+    });
+    return copy;
   }
 
-  /**
-   * Build a group from a list of exported renderer entries.
-   * Matrices in the entries are already in three.js space.
-   */
-  build(entries, { error = false, castShadow = true, receiveShadow = true, fallbackMat = 'M_Building' } = {}) {
-    const group = new THREE.Group();
-    for (const entry of entries) {
-      const k = this.data.fbxUnitScale[entry.fbx] ?? 1;
-      const fix = importFix(k);
-      const m = new THREE.Matrix4().fromArray(entry.m);
-      for (const { mesh, matrix } of this._sourceMeshes(entry)) {
-        const geo = mesh.geometry;
-        const hasVC = !!geo.attributes.color;
-        const listed = entry.mats.filter(Boolean);
-        const names = listed.length ? listed : [fallbackMat];
-        const groups = geo.groups.length ? geo.groups.length : 1;
-        const mats = [];
-        for (let i = 0; i < groups; i++) {
-          mats.push(this.material(names[Math.min(i, names.length - 1)], { error, vertexColors: hasVC }));
-        }
-        const out = new THREE.Mesh(geo, mats.length === 1 ? mats[0] : mats);
-        out.matrixAutoUpdate = false;
-        out.matrix.copy(m).multiply(fix).multiply(matrix);
-        out.matrix.decompose(out.position, out.quaternion, out.scale);
-        out.castShadow = castShadow;
-        out.receiveShadow = receiveShadow;
-        group.add(out);
-      }
-    }
-    return group;
+  terrain() {
+    const t = this.instance('terrain');
+    t.traverse((o) => { if (o.isMesh) o.material = this.material('Terrain'); });
+    return t;
   }
 }
 
-/**
- * Like build(), but bakes static meshes into one mesh per material, which cuts
- * draw calls. Multi-material meshes are kept as they are.
- */
-AssetLibrary.prototype.buildMerged = function buildMerged(entries, opts = {}) {
-  const src = this.build(entries, opts);
-  src.updateMatrixWorld(true);
-  const buckets = new Map();
-  const out = new THREE.Group();
-  for (const mesh of [...src.children]) {
-    if (Array.isArray(mesh.material)) {
-      out.add(mesh);
-      continue;
+/** Ground height lookup on the baked grid (bilinear), used for support beams. */
+export class Heightfield {
+  constructor({ x0, z0, step, n, heights }) {
+    Object.assign(this, { x0, z0, step, n });
+    this.h = Float32Array.from(heights);
+  }
+
+  /** Height at (x, z), or -Infinity outside the terrain. */
+  at(x, z) {
+    const fx = (x - this.x0) / this.step;
+    const fz = (z - this.z0) / this.step;
+    if (fx < 0 || fz < 0 || fx > this.n - 1 || fz > this.n - 1) return -Infinity;
+    const i = Math.min(Math.floor(fx), this.n - 2);
+    const j = Math.min(Math.floor(fz), this.n - 2);
+    const u = fx - i;
+    const v = fz - j;
+    const n = this.n;
+    const h = this.h;
+    // match the baked triangles (diagonal from (i+1, j) to (i, j+1))
+    if (u + v <= 1) {
+      return h[j * n + i] + (h[j * n + i + 1] - h[j * n + i]) * u + (h[(j + 1) * n + i] - h[j * n + i]) * v;
     }
-    const g = mesh.geometry;
-    const attrs = Object.keys(g.attributes).filter((a) => ['position', 'normal', 'uv', 'color'].includes(a)).sort();
-    const key = `${mesh.material.uuid}|${attrs.join(',')}`;
-    const geo = new THREE.BufferGeometry();
-    for (const a of attrs) geo.setAttribute(a, g.attributes[a]);
-    if (g.index) geo.setIndex(g.index);
-    const baked = (g.index ? geo.toNonIndexed() : geo.clone()).applyMatrix4(mesh.matrixWorld);
-    if (!buckets.has(key)) buckets.set(key, { material: mesh.material, geos: [] });
-    buckets.get(key).geos.push(baked);
+    const d = h[(j + 1) * n + i + 1];
+    return d + (h[(j + 1) * n + i] - d) * (1 - u) + (h[j * n + i + 1] - d) * (1 - v);
   }
-  for (const { material, geos } of buckets.values()) {
-    const merged = mergeGeometries(geos, false);
-    if (!merged) continue;
-    merged.computeBoundingSphere();
-    merged.computeBoundingBox();
-    out.add(new THREE.Mesh(merged, material));
-  }
-  // Rays (support beams, pointers) test the original pieces, which are small with
-  // tight bounds, instead of one terrain-sized mesh. They are never rendered.
-  out.userData.colliders = src;
-  return out;
-};
+}
 
 function makeToonGradient() {
   const data = new Uint8Array([90, 170, 255]);

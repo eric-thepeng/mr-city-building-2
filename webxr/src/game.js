@@ -89,7 +89,7 @@ export class Building {
     if (resource) {
       def = { meshes: resource.meshes, beams: [], maxBeamLength: 0 };
       new THREE.Matrix4().fromArray(resource.m).decompose(this.root.position, this.root.quaternion, tmpV);
-      if (resource.vfx) this.root.add(makeGasVfx());
+      if (resource.vfx) this.root.add(makeGasVfx(game));
     } else {
       def = game.data.blocks[key];
       this.root.position.copy(position);
@@ -97,11 +97,11 @@ export class Building {
     this.def = def;
     this.maxBeamLength = def.maxBeamLength;
 
-    // visuals (Regular Object / Error Object)
-    this.regular = assets.build(def.meshes);
-    this.error = assets.build(def.meshes, { error: true });
-    this.error.visible = false;
-    this.root.add(this.regular, this.error);
+    // visuals (Regular Object; the red Error Object is made on first use)
+    this.modelName = resource ? `resource_${resource.index}` : `block_${key}`;
+    this.regular = assets.instance(this.modelName);
+    this.error = null;
+    this.root.add(this.regular);
 
     // collider proxy used for grabbing and as ground for other buildings' beams
     // (root's world matrix is still identity here, so this box is in root-local space)
@@ -114,10 +114,8 @@ export class Building {
     this.localBox = box;
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    this.collider = new THREE.Mesh(
-      new THREE.BoxGeometry(size.x, size.y, size.z),
-      new THREE.MeshBasicMaterial({ visible: false }),
-    );
+    this.collider = new THREE.Mesh(game.boxGeometry, game.colliderMaterial);
+    this.collider.scale.copy(size);
     this.collider.position.copy(center);
     this.collider.userData.building = this;
     this.root.add(this.collider);
@@ -134,17 +132,15 @@ export class Building {
       return { holder, body, length: 0 };
     });
 
-    // UI
+    // UI (labels only allocate a texture once they show text; the hover info
+    // panel is one shared label that moves to whichever building is hovered)
+    this.top = top;
     this.nameLabel = new Label({ height: 0.012 });
     this.nameLabel.mesh.position.y = top + 0.014;
     this.badge = new Label({ height: 0.014, font: 800 });
     this.badge.mesh.position.y = top + 0.036;
     this.badge.visible = false;
-    this.infoPanel = new Label({ height: 0.011, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030' });
-    this.infoPanel.mesh.position.y = top + 0.03;
-    this.infoPanel.mesh.renderOrder = 12;
-    this.infoPanel.visible = false;
-    this.root.add(this.nameLabel.mesh, this.badge.mesh, this.infoPanel.mesh);
+    this.root.add(this.nameLabel.mesh, this.badge.mesh);
 
     // DistanceDetectIndication
     const r = this.info?.detectDistance ?? 0;
@@ -178,7 +174,7 @@ export class Building {
     if (this.state === State.COMPLETE) return false;
     this.cancelTween();
     if (this.state === State.WAITING) this.state = State.ONGOING;
-    this.infoPanel.visible = false;
+    this.onHoverEnd();
     this.detectSphere.visible = true;
     return true;
   }
@@ -209,11 +205,17 @@ export class Building {
     for (const [k, v] of Object.entries(this.info.scoring)) {
       lines.push(`${this.game.data.buildingInfo[k]?.displayName ?? k} ${v > 0 ? '+' : ''}${v}`);
     }
-    this.infoPanel.set(lines.join('\n'));
-    this.infoPanel.visible = true;
+    const panel = this.game.infoPanel;
+    panel.set(lines.join('\n'));
+    panel.mesh.position.set(0, this.top + 0.03, 0);
+    this.root.add(panel.mesh);
+    panel.visible = true;
   }
 
-  onHoverEnd() { this.infoPanel.visible = false; }
+  onHoverEnd() {
+    const panel = this.game.infoPanel;
+    if (panel.mesh.parent === this.root) panel.visible = false;
+  }
 
   // --- per-frame -------------------------------------------------------
   update() {
@@ -242,12 +244,16 @@ export class Building {
   // SupportBeam.CalculateSupportBeam
   calculateSupportBeam(beam) {
     beam.holder.getWorldPosition(tmpV);
+    // terrain: O(1) lookup on the baked heightfield
+    const ground = this.game.assets.heightfield.at(tmpV.x, tmpV.z);
+    let distance = tmpV.y >= ground ? tmpV.y - ground : Infinity;
+    // other buildings and resource nodes: a short ray
     const ray = this.game.raycaster;
     ray.set(tmpV, DOWN);
     ray.near = 0;
-    ray.far = this.maxBeamLength;
-    const hit = ray.intersectObjects(this.game.groundTargets(this), false)[0];
-    const distance = hit ? hit.distance : Infinity;
+    ray.far = Math.min(this.maxBeamLength, distance);
+    const hit = ray.intersectObjects(this.game.obstacleTargets(this), false)[0];
+    if (hit) distance = hit.distance;
     this.adjustBeam(beam, distance);
     return distance > this.maxBeamLength ? -1 : distance;
   }
@@ -264,8 +270,12 @@ export class Building {
   setDisplayState(ok, force = false) {
     if (!force && this.displayState === ok) return;
     this.displayState = ok;
+    if (!ok && !this.error) {
+      this.error = this.game.assets.instance(this.modelName, { error: true });
+      this.root.add(this.error);
+    }
     this.regular.visible = ok;
-    this.error.visible = !ok;
+    if (this.error) this.error.visible = !ok;
   }
 
   resetToWaiting() {
@@ -325,7 +335,7 @@ export class Building {
       },
       done: () => {
         this.game.scene.remove(fly.mesh);
-        fly.texture.dispose();
+        fly.dispose();
         this.game.money.gain(score);
         this.game.sfx('coin');
       },
@@ -352,7 +362,10 @@ export class Building {
   }
 
   dispose() {
+    this.onHoverEnd();
     this.root.removeFromParent();
+    this.nameLabel.dispose();
+    this.badge.dispose();
   }
 }
 
@@ -362,7 +375,7 @@ export class Game {
     this.data = data;
     this.assets = assets;
     this.scene = scene;
-    this.terrain = terrain.userData.colliders ?? terrain;
+    this.terrain = terrain;
     this.events = new THREE.EventDispatcher();
     this.raycaster = new THREE.Raycaster();
     this.buildings = [];
@@ -375,10 +388,15 @@ export class Game {
     this.beamGeometry = new THREE.CylinderGeometry(0.002, 0.002, 1, 8);
     this.beamMaterial = new THREE.MeshToonMaterial({ color: 0xc8cdd8, gradientMap: assets.gradient });
     this.beamErrorMaterial = new THREE.MeshToonMaterial({ color: 0xff4a4a, gradientMap: assets.gradient });
-    this.sphereGeometry = new THREE.SphereGeometry(1, 32, 16);
+    this.sphereGeometry = new THREE.SphereGeometry(1, 24, 12);
     this.detectMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(0.61, 0.82, 0.59), transparent: true, opacity: 0.12, depthWrite: false,
     });
+    this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
+    this.colliderMaterial = new THREE.MeshBasicMaterial({ visible: false });
+    this.gasGeometry = new THREE.SphereGeometry(1, 8, 6);
+    this.infoPanel = new Label({ height: 0.011, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
+    this.infoPanel.visible = false;
 
     this.group = new THREE.Group();
     this.group.name = 'Game';
@@ -391,9 +409,9 @@ export class Game {
 
     this.hand = new HandManager(this);
 
-    for (const res of data.environment.resources) {
-      this.addBuilding(new Building(this, res.type, { resource: res }));
-    }
+    data.environment.resources.forEach((res, index) => {
+      this.addBuilding(new Building(this, res.type, { resource: { ...res, index } }));
+    });
   }
 
   start() { this.hand.refresh(); }
@@ -419,13 +437,18 @@ export class Game {
 
   grabbables() { return this.buildings.filter((b) => b.grabbable).map((b) => b.collider); }
 
-  /** What a support beam can stand on: terrain, resource nodes and finished buildings. */
-  groundTargets(except) {
-    const list = [this.terrain];
+  /** Things other than terrain a support beam can stand on: resource nodes and finished buildings. */
+  obstacleTargets(except) {
+    const list = [];
     for (const b of this.buildings) {
       if (b !== except && b.state === State.COMPLETE) list.push(b.isResource ? b.regular : b.collider);
     }
     return this._flatten(list);
+  }
+
+  /** Everything a building can rest on, including the terrain mesh (mouse dragging). */
+  groundTargets(except) {
+    return [...this._flatten([this.terrain]), ...this.obstacleTargets(except)];
   }
 
   _flatten(list) {
@@ -463,24 +486,23 @@ export class Game {
 function easeOutQuad(t) { return 1 - (1 - t) * (1 - t); }
 function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
 
-// Stand-in for the Unity VFX Graph gas plume on gas resource nodes.
-function makeGasVfx() {
+// Stand-in for the Unity VFX Graph gas plume: two pulsing puffs (cheap on Specs).
+function makeGasVfx(game) {
   const group = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color: 0x9cf5c4, transparent: true, opacity: 0.5, depthWrite: false });
-  const geo = new THREE.SphereGeometry(1, 10, 8);
-  const puffs = [];
-  for (let i = 0; i < 10; i++) {
-    const m = new THREE.Mesh(geo, mat.clone());
+  const puffs = [0, 0.5].map((phase) => {
+    const m = new THREE.Mesh(game.gasGeometry, new THREE.MeshBasicMaterial({
+      color: 0x9cf5c4, transparent: true, opacity: 0.5, depthWrite: false,
+    }));
     m.raycast = () => {};
     group.add(m);
-    puffs.push({ m, phase: i / 10, dx: (Math.random() - 0.5) * 0.02, dz: (Math.random() - 0.5) * 0.02 });
-  }
+    return { m, phase };
+  });
   group.userData.update = (time) => {
     for (const p of puffs) {
       const t = (time * 0.35 + p.phase) % 1;
-      p.m.position.set(p.dx * t, 0.005 + t * 0.07, p.dz * t);
-      p.m.scale.setScalar(0.004 + t * 0.01);
-      p.m.material.opacity = 0.55 * (1 - t);
+      p.m.position.set(0, 0.005 + t * 0.06, 0);
+      p.m.scale.setScalar(0.005 + t * 0.01);
+      p.m.material.opacity = 0.5 * (1 - t);
     }
   };
   group.userData.animated = true;

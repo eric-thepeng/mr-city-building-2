@@ -953,7 +953,7 @@
     1.0,
     1.0
    ],
-   "map": "assets/Textures/spacebits_texture.png"
+   "map": "data/textures/spacebits_texture.png"
   },
   "M_Sign": {
    "color": [
@@ -971,7 +971,7 @@
     1.0,
     1.0
    ],
-   "map": "assets/Textures/spacebits_texture_1.png"
+   "map": "data/textures/spacebits_texture_1.png"
   },
   "M_Glass": {
    "color": [

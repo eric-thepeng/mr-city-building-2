@@ -27,10 +27,15 @@ class Pointer {
     this.index = index;
     this.controller = renderer.xr.getController(index);
     this.grip = renderer.xr.getControllerGrip(index);
-    this.grip.add(controllerModels.createControllerModel(this.grip));
     this.hand = renderer.xr.getHand(index);
-    this.handModel = handModels.createHandModel(this.hand, 'mesh');
-    this.hand.add(this.handModel);
+    this.handModel = null;
+    // Controller / hand meshes are downloaded from a CDN when an input connects.
+    // They are skipped on Specs (no controllers; you see your own hands).
+    if (controllerModels) this.grip.add(controllerModels.createControllerModel(this.grip));
+    if (handModels) {
+      this.handModel = handModels.createHandModel(this.hand, 'mesh');
+      this.hand.add(this.handModel);
+    }
     this.line = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -1)]),
       new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }),
@@ -93,13 +98,13 @@ class Pointer {
 }
 
 export class XRInput {
-  constructor(renderer, parent, game) {
+  constructor(renderer, parent, game, { models = true } = {}) {
     this.renderer = renderer;
     this.game = game;
     this.raycaster = new THREE.Raycaster();
     this.buttons = []; // { mesh, onPress }
-    const controllerModels = new XRControllerModelFactory();
-    const handModels = new XRHandModelFactory();
+    const controllerModels = models ? new XRControllerModelFactory() : null;
+    const handModels = models ? new XRHandModelFactory() : null;
     this.hands = [0, 1].map((i) => {
       const s = new Pointer(i, renderer, controllerModels, handModels);
       s.controller.addEventListener('connected', (e) => {
@@ -125,7 +130,7 @@ export class XRInput {
 
   /** Show hand meshes in VR. In AR the real hands are already visible. */
   setHandModelsVisible(v) {
-    for (const s of this.hands) s.handModel.visible = v;
+    for (const s of this.hands) if (s.handModel) s.handModel.visible = v;
   }
 
   addButton(mesh, onPress) {
