@@ -22,25 +22,42 @@ Notes for Specs, from Snap's WebXR guidance:
   The game doesn't depend on `select` events.
 - Antialiasing is off on Specs, because fill rate is the limit. The profile is picked from the user agent;
   add `?specs` to force it on.
-- In AR, the sky, fog and virtual hand meshes are hidden. The world-space **New game** button sits under
-  the budget board.
+- In AR, the sky, fog and virtual hand meshes are hidden.
+- Buildings use lit materials plus part of their texture as glow. Dark colours look see-through on
+  Specs' display, and the earlier toon shading rendered black there.
 
-### Memory budget (Specs)
+### The sandbox
+
+The Unity game surrounded the player with a large landscape. Here it is a **sandbox in front of you**:
+- **Layout:** the area of the Unity landscape that holds the 36 ore and gas nodes, squeezed into a
+  **61 × 56 cm** board with the hills flattened.
+- **Scale:** everything on the board, buildings included, is shown at **half** the Unity size
+  (`BOARD_SCALE` in `src/game.js`).
+- **Placement:** when you enter AR or VR, the board appears about 0.75 m ahead and 0.45 m below your eyes,
+  facing you. **Recenter** (under the budget sign) moves it in front of you again; **New game** restarts.
+- **Hand:** the buildings in your hand wait along the near edge of the board.
+
+To change the board's size or flatness, edit `SANDBOX` in `tools/bake.js` and bake again.
+Its placement in front of you is set by `BOARD_DISTANCE` / `BOARD_BELOW_EYES` in `src/main.js`.
+
+### Memory and performance budget (Specs)
 
 Specs stops apps that use too much memory ("App Stopped: high memory used"), so the game is kept small:
 
-| | Before | Now |
+| | First version | Now |
 |---|---|---|
-| Models | 33 FBX files parsed on the device | one pre-baked `data/world.glb` (1.3 MB) |
-| Terrain | 57 Unity pieces, 133k triangles, kept twice for rendering + collisions | 81×81 heightfield, 12.8k triangles, 6 × 6 m around the player |
-| Support-beam ground test | raycast against the terrain mesh | O(1) lookup in `data/terrain.json` |
+| Models | 33 FBX files parsed on the device | one pre-baked `data/world.glb` (1.1 MB) |
+| Terrain | 57 Unity pieces, 133k triangles, kept twice | one sandbox mesh, 5.8k triangles |
+| Support-beam ground test | raycast against the terrain mesh | O(1) lookup in `data/board.json` |
+| Resource nodes | 36 separate models | merged into one mesh per material |
 | Textures | two 1024² atlases | two 256² atlases |
-| Labels | 119 canvas textures (5.4 MPx) | made on first use, no mipmaps, one shared hover panel (~8 textures) |
+| Labels | 119 canvas textures (5.4 MPx), a new texture whenever the text changes | made on first use, redrawn in place, no mipmaps (~8 textures) |
 | Red "can't build" model | a second copy of every building | made only when first needed |
 | Hand / controller meshes | downloaded from a CDN | not loaded on Specs |
 | XR resolution | 100% | 75% on Specs (`?fb=1` overrides) |
 
-Measured in desktop Chrome: geometry 13.1 MB → 0.74 MB, JS heap 38 MB → 22 MB.
+Measured in desktop Chrome: 27 draw calls (was 84), geometry 13.1 MB → under 1 MB, JS heap 38 MB → 10 MB.
+The pointer and support-beam code also no longer creates garbage every frame (GC pauses cause stutter).
 
 ## Run it
 
@@ -100,8 +117,9 @@ python webxr/tools/bake_server.py
 ```
 
 Then open <http://localhost:8124/tools/bake.html>. The page loads the FBX files once and writes
-`data/world.glb` (all building and resource models) and `data/terrain.json` (the simplified heightfield).
-To change the terrain's area or detail, edit `TERRAIN` at the top of `tools/bake.js` and bake again.
+`data/world.glb` (all building and resource models, and the sandbox terrain) and `data/board.json`
+(the sandbox heightfield and where the resource nodes sit on it).
+To change the sandbox, edit `SANDBOX` at the top of `tools/bake.js` and bake again.
 
 ## Differences from the Unity build
 

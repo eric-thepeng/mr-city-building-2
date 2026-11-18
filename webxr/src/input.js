@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import { XRControllerModelFactory } from 'three/addons/webxr/XRControllerModelFactory.js';
 import { XRHandModelFactory } from 'three/addons/webxr/XRHandModelFactory.js';
 
-const DIRECT_GRAB_RADIUS = 0.05;
+const DIRECT_GRAB_RADIUS = 0.04;
 // Pinch detection by joint distance. This works on Spectacles, where hands are the
 // only input, and on Quest hand tracking. The gap between the two values avoids flicker.
 const PINCH_START = 0.02;
@@ -13,6 +13,10 @@ const tmpM = new THREE.Matrix4();
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
+const tmpBox = new THREE.Box3();
+const tmpP = new THREE.Vector3();
+const tmpPinch = new THREE.Vector3();
+const ONE = new THREE.Vector3(1, 1, 1);
 const yawOnly = (q) => {
   const e = new THREE.Euler().setFromQuaternion(q, 'YXZ');
   return new THREE.Quaternion().setFromEuler(new THREE.Euler(0, e.y, 0, 'YXZ'));
@@ -83,10 +87,10 @@ class Pointer {
   /** World matrix the grabbed building follows. */
   currentPose(target) {
     if (this.grabMode === 'pinch' && this.hasJoints) {
-      const p = this.pinchPoint(new THREE.Vector3());
+      const p = this.pinchPoint(tmpPinch);
       const wrist = this.hand.joints.wrist;
-      const q = wrist ? yawOnly(wrist.getWorldQuaternion(tmpQ)) : new THREE.Quaternion();
-      return target.compose(p, q, new THREE.Vector3(1, 1, 1));
+      const q = wrist ? yawOnly(wrist.getWorldQuaternion(tmpQ)) : tmpQ.identity();
+      return target.compose(p, q, ONE);
     }
     return target.copy(this.controller.matrixWorld);
   }
@@ -149,17 +153,17 @@ export class XRInput {
   /** What this pointer would act on: a building or a button. Near targets win, then the ray. */
   _pick(s) {
     const colliders = this.game.grabbables();
-    const p = s.nearPoint(new THREE.Vector3());
+    const p = s.nearPoint(tmpP);
     let best = null;
     let bestD = DIRECT_GRAB_RADIUS;
     for (const c of colliders) {
       const b = c.userData.building;
-      const d = b.localBox.clone().applyMatrix4(b.root.matrixWorld).distanceToPoint(p);
+      const d = tmpBox.copy(b.localBox).applyMatrix4(b.root.matrixWorld).distanceToPoint(p);
       if (d < bestD) { best = { building: b, distance: 0, near: true }; bestD = d; }
     }
     for (const btn of this.buttons) {
       if (!btn.mesh.visible) continue;
-      const d = new THREE.Box3().setFromObject(btn.mesh).distanceToPoint(p);
+      const d = tmpBox.setFromObject(btn.mesh).distanceToPoint(p);
       if (d < bestD) { best = { button: btn, distance: 0, near: true }; bestD = d; }
     }
     if (best) return best;
@@ -194,7 +198,7 @@ export class XRInput {
     s.grabMode = how === 'pinch' && pick.near ? 'pinch' : 'ray';
     s.controller.updateMatrixWorld();
     const pose = s.currentPose(s.pose);
-    s.localPos.copy(b.root.position).applyMatrix4(tmpM.copy(pose).invert());
+    s.localPos.copy(b.root.getWorldPosition(tmpV)).applyMatrix4(tmpM.copy(pose).invert());
     s.yawStart.copy(yawOnly(new THREE.Quaternion().setFromRotationMatrix(pose)));
     s.objYawStart.copy(b.root.quaternion);
     this._pulse(s, 0.4, 30);
@@ -242,7 +246,7 @@ export class XRInput {
           }
         }
         const pose = s.currentPose(s.pose);
-        b.root.position.copy(s.localPos).applyMatrix4(pose);
+        this.game.setWorldPosition(b, tmpV.copy(s.localPos).applyMatrix4(pose));
         const yawNow = yawOnly(new THREE.Quaternion().setFromRotationMatrix(pose));
         b.root.quaternion.copy(yawNow.multiply(s.yawStart.clone().invert()).multiply(s.objYawStart));
         s.line.scale.z = s.grabMode === 'ray' ? s.localPos.length() : 0.05;
@@ -328,24 +332,31 @@ export class MouseInput {
       // follow the ground under the cursor
       const targets = this.game.groundTargets(b);
       const ground = this.raycaster.intersectObjects(targets, false)[0];
+      const board = this.game.board;
+      const k = board.scale.y;
       if (ground) {
         // rest the building just above the highest ground under its support beams
-        b.root.position.copy(ground.point);
+        this.game.setWorldPosition(b, ground.point);
         let top = ground.point.y;
         const down = new THREE.Vector3(0, -1, 0);
         const probe = new THREE.Raycaster();
         b.root.updateMatrixWorld(true);
         for (const beam of b.beams) {
           beam.holder.getWorldPosition(tmpV);
-          probe.set(tmpV.setY(ground.point.y + 2), down);
+          probe.set(tmpV.setY(ground.point.y + 1), down);
           const h = probe.intersectObjects(targets, false)[0];
           if (h) top = Math.max(top, h.point.y);
         }
+        // board is only yawed and uniformly scaled, so heights convert directly
         const beamDrop = b.beams.length ? -b.beams[0].holder.position.y : 0;
-        b.root.position.y = top + beamDrop + this.lift;
+        b.root.position.y = (top - board.position.y) / k + beamDrop + this.lift;
       } else {
-        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -b.root.position.y);
-        if (this.raycaster.ray.intersectPlane(plane, tmpV)) b.root.position.copy(tmpV);
+        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -b.root.getWorldPosition(tmpV2).y);
+        if (this.raycaster.ray.intersectPlane(plane, tmpV)) {
+          const y = b.root.position.y;
+          this.game.setWorldPosition(b, tmpV);
+          b.root.position.y = y;
+        }
       }
       return;
     }

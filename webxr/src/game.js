@@ -2,10 +2,13 @@
 //   BuildingBase.cs, SupportBeam.cs, ScoringIdentifier.cs,
 //   HandManager.cs, MoneyManager.cs, SO_BuildingIdentifier / SO_HandPreset.
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Label } from './ui.js';
 
 export const State = Object.freeze({ WAITING: 'WAITING', ONGOING: 'ONGOING', COMPLETE: 'COMPLETE' });
 
+// The whole sandbox (and every building) is shown at this fraction of the Unity size.
+export const BOARD_SCALE = 0.5;
 const DOWN = new THREE.Vector3(0, -1, 0);
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
@@ -15,7 +18,7 @@ class MoneyManager {
   constructor(game, amount) {
     this.game = game;
     this.amount = amount;
-    this.label = new Label({ height: 0.045, bg: 'rgba(16,20,34,0.88)', fg: '#ffe27a', billboard: false });
+    this.label = new Label({ height: 0.03 * game.ui, bg: 'rgba(16,20,34,0.88)', fg: '#ffe27a', billboard: false });
     this.anchor = new THREE.Object3D();
     this.anchor.add(this.label.mesh);
     this.updateUI();
@@ -52,10 +55,12 @@ class HandManager {
     this.built = 0;
     this.game.money.gain(this.preset.freeMoney);
     const spawn = this.game.spawnCenter;
+    const spacing = this.game.data.buildingSpawn.spacing;
+    const total = this.total;
     let i = 0;
     for (const [key, count] of Object.entries(this.preset.buildings)) {
       for (let n = 0; n < count; n++) {
-        const pos = spawn.clone().add(new THREE.Vector3(this.game.data.buildingSpawn.spacing * i, 0, 0));
+        const pos = spawn.clone().add(new THREE.Vector3(spacing * (i - (total - 1) / 2), 0, 0));
         this.game.addBuilding(new Building(this.game, key, { position: pos }));
         i++;
       }
@@ -87,8 +92,9 @@ export class Building {
 
     let def;
     if (resource) {
-      def = { meshes: resource.meshes, beams: [], maxBeamLength: 0 };
-      new THREE.Matrix4().fromArray(resource.m).decompose(this.root.position, this.root.quaternion, tmpV);
+      def = { beams: [], maxBeamLength: 0 };
+      this.root.position.fromArray(resource.p);
+      this.root.quaternion.fromArray(resource.q);
       if (resource.vfx) this.root.add(makeGasVfx(game));
     } else {
       def = game.data.blocks[key];
@@ -119,6 +125,10 @@ export class Building {
     this.collider.position.copy(center);
     this.collider.userData.building = this;
     this.root.add(this.collider);
+    // what other buildings' beams can land on once this one is finished
+    this.solids = [];
+    if (resource) this.regular.traverse((o) => o.isMesh && this.solids.push(o));
+    else this.solids.push(this.collider);
     const top = box.max.y;
 
     // support beams
@@ -135,10 +145,11 @@ export class Building {
     // UI (labels only allocate a texture once they show text; the hover info
     // panel is one shared label that moves to whichever building is hovered)
     this.top = top;
-    this.nameLabel = new Label({ height: 0.012 });
-    this.nameLabel.mesh.position.y = top + 0.014;
-    this.badge = new Label({ height: 0.014, font: 800 });
-    this.badge.mesh.position.y = top + 0.036;
+    const ui = game.ui;
+    this.nameLabel = new Label({ height: 0.009 * ui });
+    this.nameLabel.mesh.position.y = top + 0.01 * ui;
+    this.badge = new Label({ height: 0.011 * ui, font: 800 });
+    this.badge.mesh.position.y = top + 0.026 * ui;
     this.badge.visible = false;
     this.root.add(this.nameLabel.mesh, this.badge.mesh);
 
@@ -207,7 +218,7 @@ export class Building {
     }
     const panel = this.game.infoPanel;
     panel.set(lines.join('\n'));
-    panel.mesh.position.set(0, this.top + 0.03, 0);
+    panel.mesh.position.set(0, this.top + 0.024 * this.game.ui, 0);
     this.root.add(panel.mesh);
     panel.visible = true;
   }
@@ -243,17 +254,20 @@ export class Building {
 
   // SupportBeam.CalculateSupportBeam
   calculateSupportBeam(beam) {
+    const game = this.game;
     beam.holder.getWorldPosition(tmpV);
-    // terrain: O(1) lookup on the baked heightfield
-    const ground = this.game.assets.heightfield.at(tmpV.x, tmpV.z);
-    let distance = tmpV.y >= ground ? tmpV.y - ground : Infinity;
-    // other buildings and resource nodes: a short ray
-    const ray = this.game.raycaster;
+    // terrain: O(1) lookup on the baked heightfield (board space = game units)
+    game.board.worldToLocal(tmpV2.copy(tmpV));
+    const ground = game.assets.heightfield.at(tmpV2.x, tmpV2.z);
+    let distance = tmpV2.y >= ground ? tmpV2.y - ground : Infinity;
+    // other buildings and resource nodes: a short ray (in world units)
+    const k = game.board.scale.y;
+    const ray = game.raycaster;
     ray.set(tmpV, DOWN);
     ray.near = 0;
-    ray.far = Math.min(this.maxBeamLength, distance);
-    const hit = ray.intersectObjects(this.game.obstacleTargets(this), false)[0];
-    if (hit) distance = hit.distance;
+    ray.far = Math.min(this.maxBeamLength, distance) * k;
+    const hit = ray.intersectObjects(game.obstacleTargets(this), false)[0];
+    if (hit) distance = hit.distance / k;
     this.adjustBeam(beam, distance);
     return distance > this.maxBeamLength ? -1 : distance;
   }
@@ -382,12 +396,25 @@ export class Game {
     this.tweens = [];
     this.audio = null;
 
-    const u = data.buildingSpawn.unity;
-    this.spawnCenter = new THREE.Vector3(u[0], u[1], -u[2]);
+    // The sandbox board holds terrain, resources and buildings in game units
+    // (Unity metres) and is shown at BOARD_SCALE in front of the player. Labels
+    // on the board are scaled up by this.ui so they keep a readable size.
+    this.board = new THREE.Group();
+    this.board.name = 'Board';
+    this.board.scale.setScalar(BOARD_SCALE);
+    this.ui = 1 / BOARD_SCALE;
+    this.board.add(terrain);
+    scene.add(this.board);
+    const layout = assets.board;
+    let maxH = 0;
+    for (const h of assets.heightfield.h) maxH = Math.max(maxH, h);
+    this.boardTop = maxH;
+    // hand row: just outside the near (+z) edge, a little above the terrain
+    this.spawnCenter = new THREE.Vector3(0, maxH + 0.08, layout.depth / 2 + 0.12);
 
-    this.beamGeometry = new THREE.CylinderGeometry(0.002, 0.002, 1, 8);
-    this.beamMaterial = new THREE.MeshToonMaterial({ color: 0xc8cdd8, gradientMap: assets.gradient });
-    this.beamErrorMaterial = new THREE.MeshToonMaterial({ color: 0xff4a4a, gradientMap: assets.gradient });
+    this.beamGeometry = new THREE.CylinderGeometry(0.003, 0.003, 1, 6);
+    this.beamMaterial = new THREE.MeshLambertMaterial({ color: 0xc8cdd8, emissive: 0x404448 });
+    this.beamErrorMaterial = new THREE.MeshLambertMaterial({ color: 0xff4a4a, emissive: 0x601010 });
     this.sphereGeometry = new THREE.SphereGeometry(1, 24, 12);
     this.detectMaterial = new THREE.MeshBasicMaterial({
       color: new THREE.Color(0.61, 0.82, 0.59), transparent: true, opacity: 0.12, depthWrite: false,
@@ -395,23 +422,22 @@ export class Game {
     this.boxGeometry = new THREE.BoxGeometry(1, 1, 1);
     this.colliderMaterial = new THREE.MeshBasicMaterial({ visible: false });
     this.gasGeometry = new THREE.SphereGeometry(1, 8, 6);
-    this.infoPanel = new Label({ height: 0.011, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
+    this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
     this.infoPanel.visible = false;
 
-    this.group = new THREE.Group();
-    this.group.name = 'Game';
-    scene.add(this.group);
+    this.group = this.board; // buildings live on the board
+    this._grab = [];
+    this._solid = [];
 
     this.money = new MoneyManager(this, data.startingMoney);
-    // floating budget board, above and behind the hand row
-    this.money.anchor.position.set(this.spawnCenter.x + 0.225, this.spawnCenter.y + 0.36, this.spawnCenter.z - 0.6);
-    this.group.add(this.money.anchor);
+    // budget sign floating over the far edge of the sandbox
+    this.money.anchor.position.set(0, maxH + 0.32, -layout.depth / 2 - 0.02);
+    this.board.add(this.money.anchor);
 
     this.hand = new HandManager(this);
 
-    data.environment.resources.forEach((res, index) => {
-      this.addBuilding(new Building(this, res.type, { resource: { ...res, index } }));
-    });
+    for (const res of layout.resources) this.addBuilding(new Building(this, res.type, { resource: res }));
+    this.mergeResourceVisuals();
   }
 
   start() { this.hand.refresh(); }
@@ -435,15 +461,67 @@ export class Game {
     this.group.add(b.root);
   }
 
-  grabbables() { return this.buildings.filter((b) => b.grabbable).map((b) => b.collider); }
+  /**
+   * Resource nodes never move, so draw all of them as one mesh per material
+   * (36 nodes -> a couple of draw calls). Their own meshes stay, hidden, for rays.
+   */
+  mergeResourceVisuals() {
+    this.board.updateMatrixWorld(true);
+    const toBoard = new THREE.Matrix4().copy(this.board.matrixWorld).invert();
+    const buckets = new Map();
+    for (const b of this.buildings) {
+      if (!b.isResource) continue;
+      b.regular.updateMatrixWorld(true);
+      b.regular.traverse((o) => {
+        if (!o.isMesh) return;
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', o.geometry.attributes.position);
+        g.setAttribute('normal', o.geometry.attributes.normal);
+        if (o.geometry.index) g.setIndex(o.geometry.index);
+        const baked = (g.index ? g.toNonIndexed() : g.clone()).applyMatrix4(toBoard.clone().multiply(o.matrixWorld));
+        if (!buckets.has(o.material)) buckets.set(o.material, []);
+        buckets.get(o.material).push(baked);
+      });
+      b.regular.visible = false;
+    }
+    for (const [material, geos] of buckets) {
+      const merged = mergeGeometries(geos, false);
+      if (!merged) continue;
+      const mesh = new THREE.Mesh(merged, material);
+      mesh.name = 'Resources';
+      mesh.raycast = () => {};
+      this.board.add(mesh);
+    }
+  }
+
+  /** Place the board: world position of its centre (at its base) and a yaw. */
+  placeBoard(position, yaw) {
+    this.board.position.copy(position);
+    this.board.rotation.set(0, yaw, 0);
+    this.board.updateMatrixWorld(true);
+  }
+
+  /** Move a building to a world position (converted to board space). */
+  setWorldPosition(b, worldPos) {
+    b.root.position.copy(this.board.worldToLocal(tmpV.copy(worldPos)));
+  }
+
+  // The two lists below are rebuilt into reused arrays (no per-frame garbage).
+  grabbables() {
+    const out = this._grab;
+    out.length = 0;
+    for (const b of this.buildings) if (b.grabbable) out.push(b.collider);
+    return out;
+  }
 
   /** Things other than terrain a support beam can stand on: resource nodes and finished buildings. */
   obstacleTargets(except) {
-    const list = [];
+    const out = this._solid;
+    out.length = 0;
     for (const b of this.buildings) {
-      if (b !== except && b.state === State.COMPLETE) list.push(b.isResource ? b.regular : b.collider);
+      if (b !== except && b.state === State.COMPLETE) for (const m of b.solids) out.push(m);
     }
-    return this._flatten(list);
+    return out;
   }
 
   /** Everything a building can rest on, including the terrain mesh (mouse dragging). */
@@ -486,10 +564,10 @@ export class Game {
 function easeOutQuad(t) { return 1 - (1 - t) * (1 - t); }
 function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
 
-// Stand-in for the Unity VFX Graph gas plume: two pulsing puffs (cheap on Specs).
+// Stand-in for the Unity VFX Graph gas plume: one rising, fading puff (cheap on Specs).
 function makeGasVfx(game) {
   const group = new THREE.Group();
-  const puffs = [0, 0.5].map((phase) => {
+  const puffs = [0].map((phase) => {
     const m = new THREE.Mesh(game.gasGeometry, new THREE.MeshBasicMaterial({
       color: 0x9cf5c4, transparent: true, opacity: 0.5, depthWrite: false,
     }));

@@ -23,6 +23,9 @@ const SPECS = params.has('specs') || /Spectacles|Snap ?OS/i.test(navigator.userA
 // When the runtime has no 'local-floor', the 'local' origin is at the head.
 // Assume this eye height so the world still sits on the floor.
 const ASSUMED_EYE_HEIGHT = 1.55;
+// Where the sandbox appears in XR, relative to the head when the session starts.
+const BOARD_DISTANCE = 0.75; // centre of the board; its near edge is ~0.45 m away
+const BOARD_BELOW_EYES = 0.45;
 
 async function main() {
   if (params.has('emulate')) await installEmulator();
@@ -49,8 +52,8 @@ async function main() {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 200);
-  // the Unity rig starts at the origin facing +Z (three.js: -Z), eyes ~1.6 m up
-  camera.position.set(0.05, 1.4, 0.3);
+  // desktop view: standing a step back from the sandbox
+  camera.position.set(0, 1.2, 0.25);
   // The player rig. three.js applies the camera's parent transform to the XR pose.
   const rig = new THREE.Group();
   rig.name = 'Rig';
@@ -71,12 +74,14 @@ async function main() {
   scene.fog = new THREE.Fog(0xbfd8f0, 2.5, 6);
 
   // ---------------------------------------------------------------- world
-  // simplified, baked heightfield terrain (see tools/bake.js)
+  // the sandbox terrain, baked from the Unity landscape (see tools/bake.js)
   const terrain = assets.terrain();
   terrain.name = 'Terrain';
-  scene.add(terrain);
 
   const game = new Game({ data, assets, scene, terrain });
+  // desktop: the sandbox sits on an imaginary table in front of the camera
+  const DESK_BOARD = new THREE.Vector3(0, 0.72, -0.45);
+  game.placeBoard(DESK_BOARD, 0);
   game.audio = makeAudio();
   game.events.addEventListener('money', (e) => { $('budget').textContent = e.amount; });
   game.events.addEventListener('hand', (e) => { $('hand').textContent = e.preset.name.replace('_', ' '); });
@@ -84,23 +89,29 @@ async function main() {
 
   // ---------------------------------------------------------------- input
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(-0.05, 0.95, -0.25);
+  controls.target.set(0, 0.8, -0.45);
   controls.enableDamping = true;
   controls.maxDistance = 6;
   controls.update();
   const mouse = new MouseInput(camera, renderer.domElement, game, controls);
   const xrInput = new XRInput(renderer, rig, game, { models: !SPECS });
 
-  // In-world "New game" button under the budget board. Inside XR there is no HTML UI.
-  const newGame = new Label({ height: 0.03, bg: 'rgba(45,108,223,0.95)', billboard: false });
-  newGame.set('New game');
-  newGame.mesh.position.set(0, -0.075, 0);
-  newGame.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
-  game.money.anchor.add(newGame.mesh);
-  xrInput.addButton(newGame.mesh, () => game.restart());
+  // In-world buttons under the budget sign (inside XR there is no HTML UI).
+  let needsPlacement = false;
+  const addButton = (text, x, onPress) => {
+    const btn = new Label({ height: 0.018 * game.ui, bg: 'rgba(45,108,223,0.95)', billboard: false });
+    btn.set(text);
+    btn.mesh.position.set(x, -0.05 * game.ui, 0);
+    btn.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
+    game.money.anchor.add(btn.mesh);
+    xrInput.addButton(btn.mesh, onPress);
+  };
+  addButton('New game', -0.07 * game.ui, () => game.restart());
+  addButton('Recenter', 0.07 * game.ui, () => { needsPlacement = true; });
 
   // ---------------------------------------------------------------- XR session
   let mode = null;
+  let xrFrames = 0;
   const startSession = async (sessionMode) => {
     // Only optional features: Spectacles documents immersive-ar + hands, but not
     // 'local-floor'. Requiring a feature the runtime lacks would fail the request.
@@ -123,6 +134,7 @@ async function main() {
     session.addEventListener('end', () => {
       mode = null;
       rig.position.y = 0;
+      game.placeBoard(DESK_BOARD, 0);
       sky.visible = true;
       scene.fog = new THREE.Fog(0xbfd8f0, 2.5, 6);
       mouse.enabled = true;
@@ -132,6 +144,8 @@ async function main() {
     // hands and controllers) to put the player's eyes at a normal standing height.
     rig.position.y = floor ? 0 : ASSUMED_EYE_HEIGHT;
     await renderer.xr.setSession(session);
+    needsPlacement = true; // put the sandbox in front of the player once the head is tracked
+    xrFrames = 0;
     window.__xrInfo = { mode: sessionMode, floor, blend: session.environmentBlendMode, enabled: session.enabledFeatures };
     document.body.classList.add('in-xr');
   };
@@ -161,23 +175,48 @@ async function main() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  // In XR the sandbox is placed relative to the head: ahead of the player and
+  // below eye level, turned to face them. "Recenter" does it again.
+  const head = new THREE.Vector3();
+  const fwd = new THREE.Vector3();
+  const placeInFront = () => {
+    const cam = renderer.xr.getCamera();
+    cam.getWorldPosition(head);
+    cam.getWorldDirection(fwd);
+    fwd.y = 0;
+    if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1);
+    fwd.normalize();
+    const pos = head.clone().addScaledVector(fwd, BOARD_DISTANCE);
+    pos.y = head.y - BOARD_BELOW_EYES;
+    game.placeBoard(pos, Math.atan2(-fwd.x, -fwd.z));
+  };
+
   // ---------------------------------------------------------------- loop
   const clock = new THREE.Clock();
+  const animated = [];
+  game.group.traverse((o) => o.userData.animated && animated.push(o));
+  const look = new THREE.Vector3();
+  const panelPos = new THREE.Vector3();
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.1);
     const t = clock.elapsedTime;
     if (!mode) controls.update();
     else xrInput.update(dt);
     game.update(dt);
-    game.group.traverse((o) => o.userData.animated && o.userData.update(t));
+    for (const o of animated) o.userData.update(t);
     const viewer = renderer.xr.isPresenting ? renderer.xr.getCamera() : camera;
     updateBillboards(scene, viewer);
-    // keep the budget panel facing the player (yaw only)
+    // keep the budget sign facing the player (yaw only)
     const panel = game.money.anchor;
-    viewer.getWorldPosition(panel.userData.look ??= new THREE.Vector3());
-    panel.userData.look.y = panel.position.y;
-    panel.lookAt(panel.userData.look);
+    viewer.getWorldPosition(look);
+    look.y = panel.getWorldPosition(panelPos).y;
+    panel.lookAt(look);
     renderer.render(scene, camera);
+    // the XR camera pose is valid after the first rendered frames
+    if (mode && needsPlacement && ++xrFrames > 2) {
+      placeInFront();
+      needsPlacement = false;
+    }
   });
 }
 
