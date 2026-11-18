@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MR City Building — WebXR</title>
+  <style>
+    :root { --panel: rgba(14, 18, 30, 0.82); --fg: #f2f4fa; --muted: #a9b1c6; --accent: #ffcf3f; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1018; color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+    #app { position: fixed; inset: 0; }
+    #hud { position: fixed; top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; flex-wrap: wrap;
+      align-items: flex-start; pointer-events: none; }
+    .card { background: var(--panel); border-radius: 12px; padding: 12px 14px; backdrop-filter: blur(6px);
+      pointer-events: auto; }
+    .stat { font-size: 13px; color: var(--muted); }
+    .stat b { display: block; font-size: 22px; color: var(--accent); }
+    #hand { text-transform: capitalize; }
+    .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer;
+      background: #2d6cdf; color: white; }
+    button.secondary { background: #3a4156; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    #help { max-width: 360px; font-size: 13px; line-height: 1.45; color: var(--muted); }
+    #help b { color: var(--fg); }
+    #xr-note { font-size: 12px; color: #ffb4a0; margin-top: 6px; min-height: 1em; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #0d1018; z-index: 10;
+      transition: opacity .4s; }
+    #loading.hidden { opacity: 0; pointer-events: none; }
+    .bar { width: 240px; height: 6px; border-radius: 3px; background: #262c3d; overflow: hidden; margin-top: 12px; }
+    #progress { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+    body.in-xr #hud { display: none; }
+    @media (max-width: 600px) { #help { display: none; } }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+
+  <div id="hud">
+    <div class="card stat">Budget<b id="budget">–</b></div>
+    <div class="card stat">Hand<b id="hand">–</b></div>
+    <div class="card">
+      <div class="buttons">
+        <button id="enter-ar">Enter MR (passthrough)</button>
+        <button id="enter-vr">Enter VR</button>
+        <button id="restart" class="secondary">New game</button>
+      </div>
+      <div id="xr-note"></div>
+    </div>
+    <div class="card" id="help">
+      <b>How to play.</b> Grab a building from your hand (the row in front of you) and place it on the
+      terrain. Support beams must reach the ground. Each beam's length costs money. Buildings near the
+      right neighbours earn money. Look at the green radius and the +/− badges.<br>
+      <b>XR:</b> trigger / pinch to grab (point or reach), thumbstick to push/pull.<br>
+      <b>Mouse:</b> drag buildings, wheel = height, Q/E = rotate, drag empty space = look around.
+    </div>
+  </div>
+
+  <div id="loading">
+    <div style="text-align:center">
+      <div id="loading-text">Loading city kit…</div>
+      <div class="bar"><div id="progress"></div></div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

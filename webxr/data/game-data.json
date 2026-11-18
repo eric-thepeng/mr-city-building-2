@@ -1,0 +1,4173 @@
+{
+ "source": "Exported from the Unity project (main branch) by webxr/tools/export_game_data.py",
+ "startingMoney": 100,
+ "buildingSpawn": {
+  "unity": [
+   -0.286,
+   0.996,
+   0.193
+  ],
+  "spacing": 0.15
+ },
+ "buildingInfo": {
+  "Bar": {
+   "displayName": "Bar",
+   "detectDistance": 0.3,
+   "scoring": {
+    "LivingPod": 3,
+    "Bar": -5,
+    "Farm": 2,
+    "Warehouse": 1
+   }
+  },
+  "Excavator": {
+   "displayName": "Excavator",
+   "detectDistance": 0.25,
+   "scoring": {
+    "Factory": 3,
+    "Warehouse": 3,
+    "OreNode": 2
+   }
+  },
+  "Factory": {
+   "displayName": "Factory",
+   "detectDistance": 0.4,
+   "scoring": {
+    "Factory": -7,
+    "Excavator": 3,
+    "GasExtractor": 5,
+    "SpacePort": 6
+   }
+  },
+  "Farm": {
+   "displayName": "Farm",
+   "detectDistance": 0.15,
+   "scoring": {
+    "Farm": 2,
+    "Bar": 2,
+    "Warehouse": 1
+   }
+  },
+  "GasExtractor": {
+   "displayName": "GasExtractor",
+   "detectDistance": 0.35,
+   "scoring": {
+    "Factory": 3,
+    "Warehouse": 3,
+    "GasNode": 6
+   }
+  },
+  "LivingPod": {
+   "displayName": "LivingPod",
+   "detectDistance": 0.15,
+   "scoring": {
+    "LivingPod": 2,
+    "Bar": 3,
+    "Warehouse": 1
+   }
+  },
+  "SpacePort": {
+   "displayName": "SpacePort",
+   "detectDistance": 0.4,
+   "scoring": {
+    "SpacePort": -15,
+    "Factory": 8,
+    "Warehouse": 8
+   }
+  },
+  "Warehouse": {
+   "displayName": "Warehouse",
+   "detectDistance": 0.4,
+   "scoring": {
+    "Excavator": 2,
+    "GasExtractor": 4,
+    "Farm": 1,
+    "Bar": 2,
+    "LivingPod": 1,
+    "Warehouse": -10,
+    "SpacePort": 6
+   }
+  },
+  "GasNode": {
+   "displayName": "NodeGas",
+   "detectDistance": 0.0,
+   "scoring": {}
+  },
+  "OreNode": {
+   "displayName": "NodeOre",
+   "detectDistance": 0.0,
+   "scoring": {}
+  }
+ },
+ "handPresets": [
+  {
+   "name": "Farmer_01",
+   "freeMoney": 0,
+   "buildings": {
+    "Warehouse": 1,
+    "Farm": 3
+   }
+  },
+  {
+   "name": "Farmer_02",
+   "freeMoney": 0,
+   "buildings": {
+    "Bar": 1,
+    "Farm": 3
+   }
+  },
+  {
+   "name": "Pioneer_01",
+   "freeMoney": 0,
+   "buildings": {
+    "Excavator": 2,
+    "Factory": 1
+   }
+  },
+  {
+   "name": "Pioneer_02",
+   "freeMoney": 0,
+   "buildings": {
+    "GasExtractor": 2,
+    "Factory": 1
+   }
+  },
+  {
+   "name": "Pioneer_03",
+   "freeMoney": 0,
+   "buildings": {
+    "GasExtractor": 2,
+    "Warehouse": 1
+   }
+  },
+  {
+   "name": "Pioneer_04",
+   "freeMoney": 0,
+   "buildings": {
+    "Excavator": 2,
+    "Warehouse": 1
+   }
+  },
+  {
+   "name": "Resident_01",
+   "freeMoney": 0,
+   "buildings": {
+    "LivingPod": 3,
+    "Bar": 1
+   }
+  },
+  {
+   "name": "Resident_02",
+   "freeMoney": 0,
+   "buildings": {
+    "LivingPod": 3,
+    "Warehouse": 1
+   }
+  },
+  {
+   "name": "Trader_01",
+   "freeMoney": 0,
+   "buildings": {
+    "SpacePort": 1,
+    "Factory": 1
+   }
+  },
+  {
+   "name": "Trader_02",
+   "freeMoney": 0,
+   "buildings": {
+    "SpacePort": 1,
+    "Warehouse": 1
+   }
+  }
+ ],
+ "blocks": {
+  "Bar": {
+   "key": "Bar",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Space/mobile_base_carriage.fbx",
+     "node": "BM_Bar",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      -0.0,
+      0.0,
+      0.048,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      0.0,
+      -0.048,
+      0.0,
+      -0.0,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Bar_Sign.fbx",
+     "node": "BarText",
+     "mats": [
+      "M_Sign"
+     ],
+     "m": [
+      -0.0,
+      0.0,
+      0.048,
+      0.0,
+      -0.033941,
+      0.033941,
+      -0.0,
+      0.0,
+      -0.033941,
+      -0.033941,
+      -0.0,
+      0.0,
+      0.040752,
+      0.0232,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Bar_Sign.fbx",
+     "node": "BarText (1)",
+     "mats": [
+      "M_Sign"
+     ],
+     "m": [
+      0.0,
+      0.0,
+      -0.048,
+      0.0,
+      0.033941,
+      0.033941,
+      0.0,
+      0.0,
+      0.033941,
+      -0.033941,
+      0.0,
+      0.0,
+      -0.040992,
+      0.0232,
+      -0.0,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ]
+   ]
+  },
+  "Excavator": {
+   "key": "Excavator",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Space/structure_low.fbx",
+     "node": "BM_Excavator",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.045,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.036,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.045,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/drill_structure.fbx",
+     "node": "drill_module",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.045,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.036,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.045,
+      0.0,
+      0.0,
+      -0.006176,
+      -0.0,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ]
+   ]
+  },
+  "Factory": {
+   "key": "Factory",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Factory.fbx",
+     "node": "BM_Factory",
+     "mats": [
+      "M_Building_Extra"
+     ],
+     "m": [
+      4.8,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      4.8,
+      -1e-06,
+      0.0,
+      0.0,
+      1e-06,
+      4.8,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/landingpad_large.fbx",
+     "node": null,
+     "mats": [],
+     "m": [
+      0.0384,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0384,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0384,
+      0.0,
+      0.0,
+      0.02536,
+      -0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/containers_C.fbx",
+     "node": null,
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      0.0,
+      0.042448,
+      -0.0144,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/containers_C.fbx",
+     "node": null,
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      0.0,
+      0.042448,
+      0.0144,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/solarpanel.fbx",
+     "node": null,
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      0.0,
+      0.042976,
+      -0.024,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/solarpanel.fbx",
+     "node": null,
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      -0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      -0.0,
+      -0.048,
+      0.0,
+      0.0,
+      0.042976,
+      0.024,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ]
+   ]
+  },
+  "Farm": {
+   "key": "Farm",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Farm.fbx",
+     "node": "eco_module",
+     "mats": [
+      "M_Glass",
+      "M_Building"
+     ],
+     "m": [
+      2.4,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.4,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.4,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Farm.fbx",
+     "node": "space_farm_large_sprinkler",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      2.4,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.4,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.4,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Farm.fbx",
+     "node": "sprinkler",
+     "mats": [],
+     "m": [
+      2.4,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.4,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      2.4,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.014000000000000002,
+     -0.020000000000000004,
+     0.014000000000000002
+    ],
+    [
+     -0.014000000000000002,
+     -0.020000000000000004,
+     0.014000000000000002
+    ],
+    [
+     0.014000000000000002,
+     -0.020000000000000004,
+     -0.014000000000000002
+    ],
+    [
+     -0.014000000000000002,
+     -0.020000000000000004,
+     -0.014000000000000002
+    ]
+   ]
+  },
+  "GasExtractor": {
+   "key": "GasExtractor",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Space/water_storage.fbx",
+     "node": "BM_GasExtractor",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.024,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.024,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.024,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.014000000000000002,
+     -0.020000000000000004,
+     0.014000000000000002
+    ],
+    [
+     -0.014000000000000002,
+     -0.020000000000000004,
+     0.014000000000000002
+    ],
+    [
+     0.014000000000000002,
+     -0.020000000000000004,
+     -0.014000000000000002
+    ],
+    [
+     -0.014000000000000002,
+     -0.020000000000000004,
+     -0.014000000000000002
+    ]
+   ]
+  },
+  "LivingPod": {
+   "key": "LivingPod",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Space/basemodule_B.fbx",
+     "node": "BM_LivingPod",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.024,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.024,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.024,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.014000000000000002,
+     -0.020000000000000004,
+     0.014000000000000002
+    ],
+    [
+     -0.014000000000000002,
+     -0.020000000000000004,
+     0.014000000000000002
+    ],
+    [
+     0.014000000000000002,
+     -0.020000000000000004,
+     -0.014000000000000002
+    ],
+    [
+     -0.014000000000000002,
+     -0.020000000000000004,
+     -0.014000000000000002
+    ]
+   ]
+  },
+  "SpacePort": {
+   "key": "SpacePort",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Space/dropship_packed.fbx",
+     "node": "BM_SpacePort",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ]
+   ]
+  },
+  "Warehouse": {
+   "key": "Warehouse",
+   "scale": 0.4,
+   "maxBeamLength": 0.1,
+   "meshes": [
+    {
+     "fbx": "assets/Models/Space/cargodepot_A.fbx",
+     "node": "BM_Warehouse",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      0.0,
+      -0.02,
+      0.0,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/cargo_B_stacked.fbx",
+     "node": "cargo_B_stacked",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      -0.026535,
+      -0.016832,
+      -0.024596,
+      1.0
+     ]
+    },
+    {
+     "fbx": "assets/Models/Space/cargo_B_stacked.fbx",
+     "node": "cargo_B_stacked (1)",
+     "mats": [
+      "M_Building"
+     ],
+     "m": [
+      0.048,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      -0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.048,
+      0.0,
+      -0.026535,
+      -0.016832,
+      0.023404,
+      1.0
+     ]
+    }
+   ],
+   "beams": [
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     0.028000000000000004
+    ],
+    [
+     0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ],
+    [
+     -0.028000000000000004,
+     -0.020000000000000004,
+     -0.028000000000000004
+    ]
+   ]
+  }
+ },
+ "fbxUnitScale": {
+  "assets/Models/Space/mobile_base_carriage.fbx": 1.0,
+  "assets/Models/Bar_Sign.fbx": 0.01,
+  "assets/Models/Space/structure_low.fbx": 1.0,
+  "assets/Models/Space/drill_structure.fbx": 1.0,
+  "assets/Models/Factory.fbx": 0.01,
+  "assets/Models/Space/landingpad_large.fbx": 1.0,
+  "assets/Models/Space/containers_C.fbx": 1.0,
+  "assets/Models/Space/solarpanel.fbx": 1.0,
+  "assets/Models/Farm.fbx": 0.01,
+  "assets/Models/Space/water_storage.fbx": 1.0,
+  "assets/Models/Space/basemodule_B.fbx": 1.0,
+  "assets/Models/Space/dropship_packed.fbx": 1.0,
+  "assets/Models/Space/cargodepot_A.fbx": 1.0,
+  "assets/Models/Space/cargo_B_stacked.fbx": 1.0,
+  "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_22.fbx": 0.01,
+  "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_21.fbx": 0.01,
+  "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_19.fbx": 0.01,
+  "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_42.fbx": 0.01,
+  "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_09.fbx": 0.01,
+  "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_13.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_06.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_06.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_18.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_18.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_21.fbx": 0.01,
+  "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_23.fbx": 0.01,
+  "assets/Models/Space/rocks_A.fbx": 1.0,
+  "assets/Models/Space/rock_A.fbx": 1.0,
+  "assets/Models/Space/rocks_B.fbx": 1.0
+ },
+ "materials": {
+  "M_Building": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "map": "assets/Textures/spacebits_texture.png"
+  },
+  "M_Sign": {
+   "color": [
+    0.3817463,
+    0.0,
+    1.0,
+    1.0
+   ],
+   "map": null
+  },
+  "M_Building_Extra": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "map": "assets/Textures/spacebits_texture_1.png"
+  },
+  "M_Glass": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    0.0627451
+   ],
+   "map": null
+  },
+  "M_Terrain": {
+   "color": [
+    0.9433962,
+    0.68114394,
+    0.5399311,
+    1.0
+   ],
+   "map": null
+  },
+  "MT_Terrain_01": {
+   "color": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+   ],
+   "map": null
+  },
+  "M_Ore": {
+   "color": [
+    0.7924528,
+    0.47550857,
+    0.2890708,
+    1.0
+   ],
+   "map": null
+  }
+ },
+ "environment": {
+  "static": [
+   {
+    "fbx": "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_22.fbx",
+    "node": null,
+    "mats": [
+     "M_Terrain"
+    ],
+    "m": [
+     -0.033748,
+     -0.0,
+     -0.035281,
+     0.0,
+     0.0,
+     0.079718,
+     -0.0,
+     0.0,
+     0.035281,
+     -0.0,
+     -0.033748,
+     0.0,
+     1.1355,
+     -0.296985,
+     1.1385,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_21.fbx",
+    "node": null,
+    "mats": [
+     "M_Terrain"
+    ],
+    "m": [
+     -0.042285,
+     -0.0,
+     -0.006455,
+     0.0,
+     -0.0,
+     0.042775,
+     -0.0,
+     0.0,
+     0.006455,
+     -0.0,
+     -0.042285,
+     0.0,
+     0.7005,
+     0.04243,
+     -1.428,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_19.fbx",
+    "node": "MT_Mountain_L_a_19",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.018661,
+     0.003302,
+     -0.061313,
+     0.0,
+     -0.001823,
+     0.064084,
+     0.002897,
+     0.0,
+     0.061375,
+     0.000899,
+     0.018729,
+     0.0,
+     -0.8955,
+     -0.124911,
+     1.4565,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_42.fbx",
+    "node": "MT_Mountain_L_a_42",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     -0.016579,
+     0.0,
+     -0.031123,
+     0.0,
+     0.0,
+     0.035264,
+     0.0,
+     0.0,
+     0.031123,
+     0.0,
+     -0.016579,
+     0.0,
+     1.455,
+     -0.131745,
+     0.576,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_09.fbx",
+    "node": "MT_Mountain_L_a_09",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.03427,
+     0.0,
+     0.040489,
+     0.0,
+     0.0,
+     0.053045,
+     0.0,
+     0.0,
+     -0.040489,
+     0.0,
+     0.03427,
+     0.0,
+     -1.11,
+     -0.152205,
+     -1.0725,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_09.fbx",
+    "node": "MT_Mountain_L_a_09 (1)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     -0.045539,
+     0.0,
+     0.027202,
+     0.0,
+     0.0,
+     0.053045,
+     0.0,
+     0.0,
+     -0.027202,
+     0.0,
+     -0.045539,
+     0.0,
+     1.656449,
+     -0.152205,
+     -0.580649,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Mountains/MT/NoLOD/L/MT_Mountain_L_a_13.fbx",
+    "node": "MT_Mountain_L_a_13",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.055941,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.055941,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.055941,
+     0.0,
+     -0.69,
+     -0.150045,
+     1.3455,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_06.fbx",
+    "node": "MT_Terrain_L_a_06",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     0.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     3.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (13)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     4.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (20)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.0795,
+     -0.013185,
+     4.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (18)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     4.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (21)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     2.9205,
+     -0.013185,
+     4.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (19)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     1.4205,
+     -0.013185,
+     4.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (20)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     4.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (4)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.5795,
+     -0.013185,
+     -1.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (1)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.0795,
+     -0.013185,
+     3.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (2)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.0795,
+     -0.013185,
+     1.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (3)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.0795,
+     -0.013185,
+     0.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (3)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     0.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (2)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     1.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (1)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     3.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (5)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (9)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (14)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     2.9205,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (15)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     2.9205,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (16)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     2.9205,
+     -0.013185,
+     0.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (18)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     2.9205,
+     -0.013185,
+     3.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (19)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     2.9205,
+     -0.013185,
+     1.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (16)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     1.4205,
+     -0.013185,
+     1.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (17)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     1.4205,
+     -0.013185,
+     3.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (17)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     2.9205,
+     -0.013185,
+     -1.029,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (14)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     1.4205,
+     -0.013185,
+     -1.029,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (15)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     1.4205,
+     -0.013185,
+     0.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (12)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     1.4205,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (13)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     1.4205,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (7)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.079501,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (10)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.079501,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (8)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.0795,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (11)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.0795,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (6)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (8)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (7)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (9)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -4.579501,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (6)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_16.fbx",
+    "node": "MT_Terrain_L_b_16 (12)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (4)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (10)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     -4.029001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (5)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04 (11)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     -2.529001,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_06.fbx",
+    "node": "MT_Terrain_L_b_06",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     -1.029,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_06.fbx",
+    "node": "MT_Terrain_L_b_06 (1)",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -3.0795,
+     -0.013185,
+     -1.029,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_04.fbx",
+    "node": "MT_Terrain_L_a_04",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     3.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_18.fbx",
+    "node": "MT_Terrain_L_a_18",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     0.471,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_b_18.fbx",
+    "node": "MT_Terrain_L_b_18",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     -1.029,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_21.fbx",
+    "node": "MT_Terrain_L_a_21",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -1.5795,
+     -0.013185,
+     1.971,
+     1.0
+    ]
+   },
+   {
+    "fbx": "assets/terrain/Terrain/MT/NoLOD/L/MT_Terrain_L_a_23.fbx",
+    "node": "MT_Terrain_L_a_23",
+    "mats": [
+     "MT_Terrain_01"
+    ],
+    "m": [
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.015,
+     0.0,
+     -0.0795,
+     -0.013185,
+     1.971,
+     1.0
+    ]
+   }
+  ],
+  "resources": [
+   {
+    "type": "OreNode",
+    "m": [
+     0.458482,
+     -0.0217,
+     -0.888439,
+     0.0,
+     -0.621542,
+     0.706707,
+     -0.33801,
+     0.0,
+     0.6352,
+     0.707174,
+     0.310525,
+     0.0,
+     0.4362,
+     0.0864,
+     0.0207,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.034829,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034829,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034829,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.034829,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034829,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034829,
+       0.0,
+       0.027469,
+       0.0,
+       0.001246,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.450464,
+     0.360807,
+     -0.81664,
+     0.0,
+     -0.285364,
+     0.80853,
+     0.514633,
+     0.0,
+     0.845961,
+     0.464863,
+     -0.261252,
+     0.0,
+     0.517583,
+     0.168343,
+     -0.35443,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.030868,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.030868,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.030868,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.321376,
+     -0.18426,
+     0.928852,
+     0.0,
+     -0.26336,
+     0.924797,
+     0.274576,
+     0.0,
+     -0.909593,
+     -0.332865,
+     0.248681,
+     0.0,
+     0.45525,
+     0.0951,
+     -0.1719,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.038787,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.038787,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.038787,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.038787,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.038787,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.038787,
+       0.0,
+       0.030591,
+       0.0,
+       0.001388,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.784238,
+     -0.212131,
+     -0.583071,
+     0.0,
+     0.406869,
+     0.885304,
+     0.225155,
+     0.0,
+     0.468433,
+     -0.413809,
+     0.780598,
+     0.0,
+     1.02195,
+     0.29955,
+     0.1092,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.025238,
+       0.0,
+       0.001145,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.115918,
+     0.0,
+     0.993259,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     -0.993259,
+     0.0,
+     -0.115918,
+     0.0,
+     0.855039,
+     0.17235,
+     -0.16943,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.770717,
+     -0.541292,
+     0.336153,
+     0.0,
+     -0.468931,
+     0.839033,
+     0.275913,
+     0.0,
+     -0.431393,
+     0.055019,
+     -0.900485,
+     0.0,
+     0.20235,
+     0.37395,
+     -0.82665,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.983521,
+     -0.178326,
+     0.029776,
+     0.0,
+     0.10892,
+     0.715881,
+     0.689675,
+     0.0,
+     -0.144303,
+     -0.675066,
+     0.723507,
+     0.0,
+     -0.006,
+     0.249,
+     -0.795,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.025238,
+       0.0,
+       0.001145,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.781293,
+     0.624164,
+     0.0,
+     0.0,
+     -0.624164,
+     0.781293,
+     0.0,
+     0.1059,
+     0.3756,
+     -0.9975,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.036525,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.036525,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.036525,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.014016,
+     1.0305,
+     -1.305819,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.410902,
+     0.831,
+     -1.116038,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.3405,
+     0.945,
+     1.47306,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.573732,
+     0.071115,
+     -0.81595,
+     0.0,
+     -0.142748,
+     0.989658,
+     -0.014118,
+     0.0,
+     0.806508,
+     0.124575,
+     0.57795,
+     0.0,
+     0.5331,
+     0.1548,
+     0.13635,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.035677,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.035677,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.035677,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.035677,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.035677,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.035677,
+       0.0,
+       0.028138,
+       0.0,
+       0.001276,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     1.2585,
+     1.032,
+     0.0405,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     -0.306,
+     0.5865,
+     0.7935,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     -0.1215,
+     1.1535,
+     1.1205,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     -1.604184,
+     0.465,
+     0.980446,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     -0.889722,
+     0.6735,
+     -0.3735,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.16141,
+     -0.110112,
+     -0.980725,
+     0.0,
+     -0.137369,
+     0.981575,
+     -0.132816,
+     0.0,
+     0.97728,
+     0.15616,
+     0.14331,
+     0.0,
+     0.290656,
+     0.053658,
+     0.581363,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.316131,
+     -0.224797,
+     -0.921698,
+     0.0,
+     -0.188693,
+     0.937214,
+     -0.2933,
+     0.0,
+     0.929761,
+     0.266639,
+     0.253865,
+     0.0,
+     0.387497,
+     0.154548,
+     0.851672,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.161039,
+     0.314144,
+     -0.935618,
+     0.0,
+     -0.330051,
+     0.910553,
+     0.248919,
+     0.0,
+     0.930125,
+     0.268716,
+     0.250318,
+     0.0,
+     0.896352,
+     0.569547,
+     0.542901,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.034671,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034671,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034671,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     0.514504,
+     -0.857488,
+     0.0,
+     0.0,
+     0.857488,
+     0.514504,
+     0.0,
+     1.437298,
+     0.924401,
+     0.676461,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.906056,
+     0.419011,
+     0.059092,
+     0.0,
+     -0.373216,
+     0.725478,
+     0.578266,
+     0.0,
+     0.19943,
+     -0.545996,
+     0.813705,
+     0.0,
+     0.978348,
+     0.64811,
+     -0.575919,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.042068,
+     -0.284694,
+     -0.957695,
+     0.0,
+     0.432726,
+     0.858783,
+     -0.274298,
+     0.0,
+     0.900544,
+     -0.425958,
+     0.087067,
+     0.0,
+     -0.917922,
+     0.20686,
+     -0.170958,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.03511,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.03511,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.03511,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.843697,
+     -0.5085,
+     -0.172054,
+     0.0,
+     0.525383,
+     0.847968,
+     0.070168,
+     0.0,
+     0.110215,
+     -0.149595,
+     0.982585,
+     0.0,
+     -1.153541,
+     0.349589,
+     -0.182725,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.02732,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.02732,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.02732,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.938625,
+     -0.342956,
+     -0.036948,
+     0.0,
+     0.339286,
+     0.937242,
+     -0.08039,
+     0.0,
+     0.062199,
+     0.06292,
+     0.996078,
+     0.0,
+     -1.136,
+     0.261,
+     0.133,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.031434,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.031434,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.031434,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.703621,
+     0.637338,
+     -0.314194,
+     0.0,
+     0.599117,
+     0.769857,
+     0.219953,
+     0.0,
+     0.382069,
+     -0.033475,
+     -0.923527,
+     0.0,
+     -1.376,
+     0.427,
+     -0.179,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.034989,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034989,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034989,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.034989,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034989,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.034989,
+       0.0,
+       0.027595,
+       0.0,
+       0.001252,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     -0.646687,
+     0.9045,
+     0.755303,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "GasNode",
+    "m": [
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     -1.6755,
+     0.828,
+     0.216178,
+     1.0
+    ],
+    "meshes": [],
+    "vfx": true
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.993307,
+     0.111491,
+     0.03018,
+     0.0,
+     -0.049617,
+     0.647825,
+     -0.760171,
+     0.0,
+     -0.104303,
+     0.753586,
+     0.649021,
+     0.0,
+     -0.9374,
+     0.3756,
+     0.6301,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.066968,
+     -0.657787,
+     -0.750221,
+     0.0,
+     -0.414666,
+     0.702246,
+     -0.578708,
+     0.0,
+     0.907506,
+     0.272337,
+     -0.31979,
+     0.0,
+     -1.084384,
+     0.397106,
+     0.755035,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.025238,
+       0.0,
+       0.001145,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.844633,
+     0.0,
+     -0.535346,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.535346,
+     0.0,
+     -0.844633,
+     0.0,
+     0.826094,
+     0.163535,
+     -0.228576,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.042182,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.042182,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.042182,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.084934,
+     -0.192923,
+     -0.977531,
+     0.0,
+     -0.3053,
+     0.928848,
+     -0.209842,
+     0.0,
+     0.948461,
+     0.316263,
+     0.019991,
+     0.0,
+     0.524068,
+     0.171124,
+     0.178996,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.025238,
+       0.0,
+       0.001145,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.992965,
+     0.117902,
+     -0.010935,
+     0.0,
+     -0.108748,
+     0.944593,
+     0.309706,
+     0.0,
+     0.046844,
+     -0.306338,
+     0.95077,
+     0.0,
+     0.117429,
+     0.401579,
+     -1.05137,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_A.fbx",
+      "node": "Ore Node 01",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     },
+     {
+      "fbx": "assets/Models/Space/rock_A.fbx",
+      "node": "rock_A",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.025238,
+       0.0,
+       0.001145,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.637495,
+     0.0,
+     -0.770454,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.770454,
+     0.0,
+     -0.637495,
+     0.0,
+     0.409956,
+     0.159,
+     0.912724,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     0.971689,
+     0.0,
+     -0.236264,
+     0.0,
+     0.0,
+     1.0,
+     0.0,
+     0.0,
+     0.236264,
+     0.0,
+     0.971689,
+     0.0,
+     -1.117297,
+     0.307,
+     -0.181423,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   },
+   {
+    "type": "OreNode",
+    "m": [
+     -0.594236,
+     -0.802386,
+     0.055319,
+     0.0,
+     -0.698586,
+     0.480831,
+     -0.529886,
+     0.0,
+     0.398574,
+     -0.353523,
+     -0.846263,
+     0.0,
+     -1.014,
+     0.42,
+     0.71,
+     1.0
+    ],
+    "meshes": [
+     {
+      "fbx": "assets/Models/Space/rocks_B.fbx",
+      "node": "Ore Node 02",
+      "mats": [
+       "M_Ore"
+      ],
+      "m": [
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       -0.0,
+       0.0,
+       0.0,
+       0.0,
+       0.032,
+       0.0,
+       0.0,
+       0.0,
+       0.0,
+       1.0
+      ]
+     }
+    ],
+    "vfx": false
+   }
+  ]
+ }
+}
