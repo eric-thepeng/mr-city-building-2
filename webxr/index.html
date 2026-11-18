@@ -3,34 +3,62 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MR City Building — WebXR</title>
+  <title>MR City Building</title>
+  <meta name="description" content="A tiny city-building sandbox for mixed reality. Play in AR on Snap Spectacles or Meta Quest, or in VR.">
   <style>
-    :root { --panel: rgba(14, 18, 30, 0.82); --fg: #f2f4fa; --muted: #a9b1c6; --accent: #ffcf3f; }
-    html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1018; color: var(--fg);
+    :root { --bg: #0b0e16; --panel: rgba(14, 18, 30, 0.82); --fg: #f2f4fa; --muted: #a9b1c6;
+      --accent: #ffcf3f; --blue: #2d6cdf; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
       font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
     #app { position: fixed; inset: 0; }
-    #hud { position: fixed; top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; flex-wrap: wrap;
+    button { font: inherit; font-weight: 650; border: 0; border-radius: 12px; cursor: pointer; color: white; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ---------- landing */
+    #landing { position: fixed; inset: 0; display: flex; align-items: center; padding: 24px 16px;
+      background: linear-gradient(90deg, rgba(11,14,22,0.94) 0%, rgba(11,14,22,0.75) 45%, rgba(11,14,22,0.15) 100%); }
+    .intro { width: 100%; max-width: 460px; margin-left: clamp(0px, 7vw, 120px); }
+    .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+    h1 { font-size: clamp(36px, 7vw, 60px); line-height: 1.02; margin: 12px 0 14px; letter-spacing: -0.02em; }
+    .lede { font-size: 17px; line-height: 1.5; color: var(--muted); margin: 0 0 28px; }
+    .modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .mode { padding: 18px 16px; text-align: left; background: var(--blue); display: flex; flex-direction: column; gap: 4px; }
+    .mode.vr { background: #3a4156; }
+    .mode b { font-size: 20px; }
+    .mode span { font-size: 13px; font-weight: 500; opacity: .85; }
+    .mode:not(:disabled):hover { filter: brightness(1.12); }
+    .status { margin-top: 14px; min-height: 1.3em; font-size: 13px; color: var(--muted); }
+    .status.warn { color: #ffb4a0; }
+    .bar { height: 4px; border-radius: 2px; background: #262c3d; overflow: hidden; margin-top: 18px; }
+    #progress { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+    body.loaded .bar { display: none; }
+    .desktop { margin-top: 22px; background: none; color: var(--muted); padding: 0; font-weight: 600;
+      text-decoration: underline; text-underline-offset: 3px; }
+    .desktop:hover { color: var(--fg); }
+    body:not(.loaded) .desktop { visibility: hidden; }
+
+    /* ---------- desktop play HUD */
+    #hud { position: fixed; top: 16px; left: 16px; right: 16px; display: none; gap: 12px; flex-wrap: wrap;
       align-items: flex-start; pointer-events: none; }
-    .card { background: var(--panel); border-radius: 12px; padding: 12px 14px; backdrop-filter: blur(6px);
-      pointer-events: auto; }
+    .card { background: var(--panel); border-radius: 12px; padding: 12px 14px; pointer-events: auto; }
     .stat { font-size: 13px; color: var(--muted); }
     .stat b { display: block; font-size: 22px; color: var(--accent); }
     #hand { text-transform: capitalize; }
     .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-    button { font: inherit; font-weight: 600; border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer;
-      background: #2d6cdf; color: white; }
-    button.secondary { background: #3a4156; }
-    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .buttons button { padding: 10px 14px; border-radius: 10px; background: var(--blue); }
+    .buttons button.secondary { background: #3a4156; }
     #help { max-width: 360px; font-size: 13px; line-height: 1.45; color: var(--muted); }
     #help b { color: var(--fg); }
-    #xr-note { font-size: 12px; color: #ffb4a0; margin-top: 6px; min-height: 1em; }
-    #loading { position: fixed; inset: 0; display: grid; place-items: center; background: #0d1018; z-index: 10;
-      transition: opacity .4s; }
-    #loading.hidden { opacity: 0; pointer-events: none; }
-    .bar { width: 240px; height: 6px; border-radius: 3px; background: #262c3d; overflow: hidden; margin-top: 12px; }
-    #progress { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
-    body.in-xr #hud { display: none; }
-    @media (max-width: 600px) { #help { display: none; } }
+
+    body.playing #landing { display: none; }
+    body.playing #hud { display: flex; }
+    body.in-xr #landing, body.in-xr #hud { display: none; }
+    @media (max-width: 600px) {
+      #landing { align-items: flex-end; background: linear-gradient(0deg, rgba(11,14,22,0.96) 55%, rgba(11,14,22,0.2) 100%); }
+      .intro { margin-left: 0; }
+      #help { display: none; }
+    }
   </style>
   <script type="importmap">
     {
@@ -44,32 +72,36 @@
 <body>
   <div id="app"></div>
 
+  <main id="landing">
+    <div class="intro">
+      <div class="eyebrow">Mixed reality · Spectacles · Quest</div>
+      <h1>MR City Building</h1>
+      <p class="lede">A little city on a sandbox that floats in front of you. Pinch a building, set it
+        down where its neighbours pay off, and keep the budget above zero.</p>
+      <div class="modes">
+        <button id="enter-ar" class="mode" disabled><b>Enter AR</b><span>Spectacles, Quest passthrough</span></button>
+        <button id="enter-vr" class="mode vr" disabled><b>Enter VR</b><span>Quest and other headsets</span></button>
+      </div>
+      <div class="bar"><div id="progress"></div></div>
+      <div id="xr-note" class="status">Loading…</div>
+      <button id="play-desktop" class="desktop">Play in the browser with a mouse</button>
+    </div>
+  </main>
+
   <div id="hud">
     <div class="card stat">Budget<b id="budget">–</b></div>
     <div class="card stat">Hand<b id="hand">–</b></div>
     <div class="card">
       <div class="buttons">
-        <button id="enter-ar">Enter AR (Specs / passthrough)</button>
-        <button id="enter-vr">Enter VR</button>
-        <button id="restart" class="secondary">New game</button>
+        <button id="restart">New game</button>
+        <button id="back" class="secondary">Back</button>
       </div>
-      <div id="xr-note"></div>
     </div>
     <div class="card" id="help">
-      <b>How to play.</b> Grab a building from your hand (the row in front of you) and place it on the
-      terrain. Support beams must reach the ground. Each beam's length costs money. Buildings near the
-      right neighbours earn money. Look at the green radius and the +/− badges.<br>
-      <b>Hands (Specs, Quest):</b> pinch near a building to carry it, or pinch while pointing at it to
-      pull it along the ray. Let go to build.<br>
-      <b>Controllers (Quest):</b> trigger or grip to grab, thumbstick to push/pull.<br>
+      <b>How to play.</b> Drag a building from your hand (the row at the front) onto the terrain.
+      Support beams must reach the ground, and each beam's length costs money. Buildings next to the
+      right neighbours earn money: watch the green radius and the +/− badges.<br>
       <b>Mouse:</b> drag buildings, wheel = height, Q/E = rotate, drag empty space = look around.
-    </div>
-  </div>
-
-  <div id="loading">
-    <div style="text-align:center">
-      <div id="loading-text">Loading city kit…</div>
-      <div class="bar"><div id="progress"></div></div>
     </div>
   </div>
 

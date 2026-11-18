@@ -4,6 +4,7 @@ import { AssetLibrary } from './assets.js';
 import { Game } from './game.js';
 import { XRInput, MouseInput } from './input.js';
 import { Label, updateBillboards } from './ui.js';
+import { batchJointPoses } from './xr-perf.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -29,6 +30,7 @@ const BOARD_BELOW_EYES = 0.45;
 
 async function main() {
   if (params.has('emulate')) await installEmulator();
+  batchJointPoses(); // hand joints without per-frame garbage (see xr-perf.js)
   const data = await (await fetch('data/game-data.json')).json();
   const assets = new AssetLibrary(data);
   await assets.load((p) => { $('progress').style.width = `${Math.round(p * 100)}%`; });
@@ -97,6 +99,9 @@ async function main() {
   controls.target.set(0, 0.8, -0.45);
   controls.enableDamping = true;
   controls.maxDistance = 6;
+  // behind the landing page the board turns slowly; it stops once you play
+  controls.autoRotate = true;
+  controls.autoRotateSpeed = 0.6;
   controls.update();
   const mouse = new MouseInput(camera, renderer.domElement, game, controls);
   const xrInput = new XRInput(renderer, rig, game, { models: !SPECS });
@@ -113,6 +118,16 @@ async function main() {
   };
   addButton('New game', -0.07 * game.ui, () => game.restart());
   addButton('Recenter', 0.07 * game.ui, () => { needsPlacement = true; });
+
+  // ?fps: frame rate and frame time on a small sign above the budget (for on-device checks)
+  const fpsLabel = params.has('fps') ? new Label({ height: 0.012 * game.ui, billboard: false }) : null;
+  if (fpsLabel) {
+    fpsLabel.mesh.position.set(0, 0.045 * game.ui, 0);
+    game.money.anchor.add(fpsLabel.mesh);
+  }
+  let fpsFrames = 0;
+  let fpsTime = 0;
+  let fpsWorst = 0;
 
   // ---------------------------------------------------------------- XR session
   let mode = null;
@@ -170,18 +185,43 @@ async function main() {
     }));
   };
   await Promise.all([setupButton($('enter-ar'), 'immersive-ar'), setupButton($('enter-vr'), 'immersive-vr')]);
-  if (!window.isSecureContext) $('xr-note').textContent = 'WebXR needs HTTPS (or localhost).';
-  else if (!navigator.xr) $('xr-note').textContent = 'This browser has no WebXR. Use the mouse to play, or open on Specs / Quest.';
+  const note = $('xr-note');
+  note.textContent = '';
+  const noXR = $('enter-ar').disabled && $('enter-vr').disabled;
+  if (!window.isSecureContext) note.textContent = 'WebXR needs HTTPS (or localhost).';
+  else if (noXR) note.textContent = 'This browser has no AR or VR. Open this page on Spectacles or Quest, or play with a mouse.';
+  note.classList.toggle('warn', !!note.textContent);
   if (SPECS) document.body.classList.add('specs');
 
+  // landing page <-> desktop play
+  let playing = false;
+  // On the landing page, shift the picture so the board sits beside the text
+  // (to the right on wide screens, above it on phones).
+  const frameView = () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (playing) camera.clearViewOffset();
+    else if (w > 600) camera.setViewOffset(w, h, -w * 0.2, 0, w, h);
+    else camera.setViewOffset(w, h, 0, h * 0.22, w, h);
+    camera.updateProjectionMatrix();
+  };
+  const setPlaying = (on) => {
+    playing = on;
+    document.body.classList.toggle('playing', on);
+    controls.autoRotate = !on;
+    frameView();
+  };
+  frameView();
+  $('play-desktop').addEventListener('click', () => setPlaying(true));
+  $('back').addEventListener('click', () => setPlaying(false));
   $('restart').addEventListener('click', () => game.restart());
-  $('loading').classList.add('hidden');
+  document.body.classList.add('loaded');
   window.__game = game; // handy for debugging in the console
   window.__xrInput = xrInput;
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+    frameView();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
@@ -208,8 +248,23 @@ async function main() {
   const look = new THREE.Vector3();
   const panelPos = new THREE.Vector3();
   renderer.setAnimationLoop(() => {
-    const dt = Math.min(clock.getDelta(), 0.1);
+    const rawDt = clock.getDelta();
+    const dt = Math.min(rawDt, 0.1);
     const t = clock.elapsedTime;
+    if (fpsLabel) {
+      fpsFrames++;
+      fpsTime += rawDt;
+      fpsWorst = Math.max(fpsWorst, rawDt);
+      if (fpsTime >= 1) {
+        fpsLabel.set(`${Math.round(fpsFrames / fpsTime)} fps · worst ${Math.round(fpsWorst * 1000)} ms`);
+        fpsFrames = 0;
+        fpsTime = 0;
+        fpsWorst = 0;
+      }
+    }
+    // Update the XR camera from this frame's head pose before the labels and the
+    // budget sign turn towards it (otherwise they use last frame's pose and wobble).
+    if (renderer.xr.isPresenting) renderer.xr.updateCamera(camera);
     if (!mode) controls.update();
     else xrInput.update(dt);
     game.update(dt);
@@ -283,5 +338,6 @@ function makeAudio() {
 
 main().catch((err) => {
   console.error(err);
-  $('loading-text').textContent = `Failed to load: ${err.message}`;
+  $('xr-note').textContent = `Failed to load: ${err.message}`;
+  $('xr-note').classList.add('warn');
 });

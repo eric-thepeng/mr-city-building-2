@@ -48,6 +48,14 @@ export class AssetLibrary {
     let mat;
     if (name === 'Terrain') {
       mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+    } else if (name === 'M_Glass') {
+      // Unity's glass is 6% opaque. On Specs' see-through display that reads as a
+      // missing lid, so use frosted, light-blue glass drawn on both sides.
+      const c = error ? 0xff8a8a : 0xcfeeff;
+      mat = new THREE.MeshLambertMaterial({
+        color: c, emissive: new THREE.Color(c).multiplyScalar(0.35),
+        transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide,
+      });
     } else if (name === 'SandboxWall') {
       mat = new THREE.MeshLambertMaterial({ color: 0xb48c6c, emissive: 0x4a3a2c }); // light: dark reads as see-through on Specs
     } else {

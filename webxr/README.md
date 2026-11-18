@@ -3,6 +3,9 @@
 A browser port of the Unity game on `main`, built with [three.js](https://threejs.org) and WebXR.
 **Live: <https://mars.pengguo.net>**
 
+The site opens on a landing page with **Enter AR** and **Enter VR** (and a link to play in the
+browser with a mouse).
+
 It targets **Snap Specs** (AR, hands only) and **Meta Quest** (AR passthrough or VR, with hands or
 controllers). It also runs on desktop with a mouse. No build step and no install: it is plain ES modules,
 and three.js loads from a CDN.
@@ -23,6 +26,7 @@ Notes for Specs, from Snap's WebXR guidance:
 - Antialiasing is off on Specs, because fill rate is the limit. The profile is picked from the user agent;
   add `?specs` to force it on.
 - In AR, the sky, fog and virtual hand meshes are hidden.
+- Glass (the Farm's dome) is frosted and drawn on both sides; Unity's 6%-opaque glass looked like a missing lid.
 - Buildings use lit materials plus part of their texture as glow. Dark colours look see-through on
   Specs' display, and the earlier toon shading rendered black there.
 
@@ -61,6 +65,13 @@ Specs stops apps that use too much memory ("App Stopped: high memory used"), so 
 
 Measured in desktop Chrome: 27 draw calls (was 84), geometry 13.1 MB → under 1 MB, JS heap 38 MB → 10 MB.
 The pointer, grab-rotation and support-beam code no longer creates garbage every frame (GC pauses cause stutter).
+
+**Smoothness.** three.js reads hand joints with one `getJointPose()` per joint (50 calls, each returning new
+objects, every frame). `src/xr-perf.js` answers those calls from one batched `fillPoses()` per hand, which is
+what fixed stutter on Spectacles for Babylon.js. The XR camera is also updated before labels and the budget
+sign turn towards it, so they no longer lag a frame behind the head.
+
+Add **`?fps`** to the address to show the frame rate and the slowest frame of each second above the budget sign.
 
 ## Run it
 
