@@ -102,7 +102,6 @@ export class XRInput {
     this.renderer = renderer;
     this.game = game;
     this.raycaster = new THREE.Raycaster();
-    this.buttons = []; // { mesh, onPress }
     this.hands = [0, 1].map((i) => {
       const s = new Pointer(i, renderer);
       s.controller.addEventListener('connected', (e) => {
@@ -152,9 +151,9 @@ export class XRInput {
     for (const s of this.hands) if (s.handModel) s.handModel.visible = v;
   }
 
-  addButton(mesh, onPress) {
-    this.buttons.push({ mesh, onPress });
-  }
+  addButton(mesh, onPress) { this.game.addButton(mesh, onPress); }
+
+  get buttons() { return this.game.buttons; }
 
   _rayFrom(s) {
     tmpM.identity().extractRotation(s.controller.matrixWorld);
@@ -329,6 +328,14 @@ export class MouseInput {
   down(e) {
     if (!this.enabled || e.button !== 0) return;
     this._ray(e);
+    // in-world buttons (e.g. picking a pack at a milestone)
+    const shown = this.game.buttons.filter((b) => b.mesh.visible);
+    const press = this.raycaster.intersectObjects(shown.map((b) => b.mesh), false)[0];
+    if (press) {
+      shown.find((b) => b.mesh === press.object).onPress();
+      e.stopImmediatePropagation();
+      return;
+    }
     const hit = this.raycaster.intersectObjects(this.game.grabbables(), false)[0];
     if (!hit) return;
     const b = hit.object.userData.building;

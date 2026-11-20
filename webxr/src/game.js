@@ -46,12 +46,14 @@ class HandManager {
   constructor(game) {
     this.game = game;
     this.preset = null;
+    this.next = null;
     this.built = 0;
   }
   get total() { return Object.values(this.preset.buildings).reduce((a, b) => a + b, 0); }
   refresh() {
-    const presets = this.game.data.handPresets;
-    this.preset = presets[Math.floor(Math.random() * presets.length)];
+    const pool = this.game.progress.pool();
+    this.preset = this.next ?? pool[Math.floor(Math.random() * pool.length)];
+    this.next = null; // set when a pack is picked: its first hand comes next
     this.built = 0;
     this.game.money.gain(this.preset.freeMoney);
     const spawn = this.game.spawnCenter;
@@ -73,6 +75,125 @@ class HandManager {
   }
 }
 
+// ------------------------------------------------------------------ Progress
+// Score milestones unlock building packs (the way Islanders hands out new buildings).
+// Score = every point placements earned, minus the ones they lost; the budget is separate.
+class Progress {
+  constructor(game) {
+    this.game = game;
+    this.unlockAll = false;
+    const ui = game.ui;
+    const anchor = game.money.anchor;
+    this.label = new Label({ height: 0.013 * ui, bg: 'rgba(16,20,34,0.85)', fg: '#9fe0ff', billboard: false });
+    this.label.mesh.position.set(0, 0.034 * ui, 0);
+    this.title = new Label({ height: 0.013 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false });
+    this.title.mesh.position.set(0, 0.122 * ui, 0);
+    this.title.visible = false;
+    anchor.add(this.label.mesh, this.title.mesh);
+    this.options = [-1, 1].map((side) => {
+      const label = new Label({ height: 0.014 * ui, bg: 'rgba(45,108,223,0.95)', billboard: false });
+      label.mesh.position.set(side * 0.085 * ui, 0.078 * ui, 0);
+      label.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
+      label.visible = false;
+      anchor.add(label.mesh);
+      const option = { label, pack: null };
+      game.addButton(label.mesh, () => { if (option.pack) this.choose(option.pack); });
+      return option;
+    });
+    this.reset();
+  }
+
+  reset() {
+    this.score = 0;
+    this.level = 0;
+    this.owed = 0;
+    this.unlocked = new Set(this.unlockAll ? this.game.data.packs.map((p) => p.name) : []);
+    this.hideChoice();
+    this.updateUI();
+  }
+
+  get nextAt() {
+    const m = this.game.data.milestones;
+    if (!m.length) return Infinity;
+    return this.level < m.length ? m[this.level] : m[m.length - 1] + 80 * (this.level - m.length + 1);
+  }
+
+  /** Hand presets that can be dealt: Unity's, plus those of every unlocked pack. */
+  pool() {
+    const out = [...this.game.data.handPresets];
+    for (const pack of this.game.data.packs) if (this.unlocked.has(pack.name)) out.push(...pack.presets);
+    return out;
+  }
+
+  locked() { return this.game.data.packs.filter((p) => !this.unlocked.has(p.name)); }
+
+  add(points) {
+    this.score += points;
+    while (this.score >= this.nextAt) {
+      this.level++;
+      this.reach();
+    }
+    this.updateUI();
+  }
+
+  reach() {
+    this.game.sfx('milestone');
+    if (this.offering) { this.owed++; return; }
+    const locked = this.locked();
+    if (locked.length) this.offer(locked);
+    else this.bonus();
+  }
+
+  /** Every pack is unlocked: a milestone pays budget instead. */
+  bonus() {
+    const n = this.game.data.milestoneBonus;
+    this.game.money.gain(n);
+    this.title.set(`Milestone! +${n} budget`);
+    this.title.visible = true;
+    this.game.addTween({ duration: 2.5, update: () => {}, done: () => { if (!this.offering) this.title.visible = false; } });
+  }
+
+  offer(locked) {
+    const picks = [...locked].sort(() => Math.random() - 0.5).slice(0, 2);
+    this.offering = true;
+    this.title.set('Milestone! Pick a new pack');
+    this.title.visible = true;
+    this.options.forEach((o, i) => {
+      o.pack = picks[i] ?? null;
+      if (o.pack) o.label.set(`${o.pack.displayName}\n${o.pack.summary}`);
+      o.label.visible = !!o.pack;
+    });
+  }
+
+  choose(pack) {
+    this.unlocked.add(pack.name);
+    this.game.hand.next = pack.presets[0]; // the next hand comes from the new pack
+    this.hideChoice();
+    this.game.sfx('build');
+    this.game.events.dispatchEvent({ type: 'pack', pack });
+    if (this.owed > 0) {
+      this.owed--;
+      const locked = this.locked();
+      if (locked.length) this.offer(locked);
+      else this.bonus();
+    }
+  }
+
+  hideChoice() {
+    this.offering = false;
+    this.title.visible = false;
+    for (const o of this.options) {
+      o.label.visible = false;
+      o.pack = null;
+    }
+  }
+
+  updateUI() {
+    this.label.set(`Score ${this.score} · next pack at ${this.nextAt}`);
+    this.game.events.dispatchEvent({ type: 'score', score: this.score, next: this.nextAt });
+  }
+}
+
 // ------------------------------------------------------------------ Building
 export class Building {
   /**
@@ -83,6 +204,7 @@ export class Building {
     this.game = game;
     this.key = key;
     this.isResource = !!resource;
+    this.isAir = !!resource?.air; // ice clouds: drawn on their own (they fade and move), never ground
     this.info = game.data.buildingInfo[key];
     const assets = game.assets;
 
@@ -203,6 +325,9 @@ export class Building {
       this.game.cancelAllBadges();
       this.canScore = true;
       this.game.sfx('build');
+      this.pop();
+      this.game.puff(this.root.position);
+      this.game.tickClouds();
       this.game.hand.buildOne();
     } else {
       this.setDisplayState(true);
@@ -314,7 +439,10 @@ export class Building {
         const s = this.info.scoring[other.key] ?? 0;
         sum += s;
         other.showBadge(s, false);
-        if (harvest) other.sendAndAddScore(s);
+        if (harvest) {
+          other.sendAndAddScore(s);
+          if (s > 0 && this.info.consumes?.includes(other.key)) this.game.depleteCloud(other);
+        }
       } else {
         other.hideBadge();
       }
@@ -326,11 +454,21 @@ export class Building {
       sum += a;
       if (harvest && a) this.sendAndAddScore(a);
     }
+    if (harvest) this.game.progress.add(sum);
     this.showBadge(sum, true);
     return sum;
   }
 
   harvestScore() { this.calculateScoring(true); }
+
+  /** A quick squash-and-stretch when a building lands. */
+  pop() {
+    this.game.addTween({
+      duration: 0.35,
+      update: (t) => this.root.scale.setScalar(1 + 0.18 * Math.sin(Math.PI * t) * (1 - t)),
+      done: () => this.root.scale.setScalar(1),
+    });
+  }
 
   showBadge(score, active) {
     if (score === 0) return this.hideBadge();
@@ -447,6 +585,9 @@ export class Game {
     this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
     this.infoPanel.visible = false;
 
+    this.ringGeometry = new THREE.RingGeometry(0.6, 1, 24).rotateX(-Math.PI / 2);
+    this.buttons = []; // in-world buttons { mesh, onPress }, pressed by hands, controllers or the mouse
+    this.time = 0;
     this.group = this.board; // buildings live on the board
     this._grab = [];
     this._solid = [];
@@ -456,10 +597,17 @@ export class Game {
     this.money.anchor.position.set(0, maxH + 0.32, -layout.depth / 2 - 0.02);
     this.board.add(this.money.anchor);
 
+    this.progress = new Progress(this);
     this.hand = new HandManager(this);
 
     for (const res of layout.resources) this.addBuilding(new Building(this, res.type, { resource: res }));
     this.mergeResourceVisuals();
+    this.clouds = this.buildings.filter((b) => b.isAir);
+    this.clouds.forEach((c, i) => {
+      c.home = c.root.position.clone();
+      c.phase = i * 1.7;
+    });
+    this.reforms = []; // { cloud, wait }: used-up clouds, re-forming after `wait` more buildings
   }
 
   start() { this.hand.refresh(); }
@@ -474,8 +622,74 @@ export class Game {
     this.tweens.length = 0;
     this.money.amount = this.data.startingMoney;
     this.money.updateUI();
+    this.reforms.length = 0;
+    for (const c of this.clouds) {
+      c.root.position.copy(c.home);
+      c.regular.scale.setScalar(1);
+      c.regular.visible = true;
+      c.depleted = false;
+      c.canScore = true;
+    }
+    this.progress.reset();
+    this.hand.next = null;
     this.cancelAllBadges();
     this.hand.refresh();
+  }
+
+  addButton(mesh, onPress) {
+    this.buttons.push({ mesh, onPress });
+  }
+
+  /** A Weather Station took this cloud: it fades out and forms again elsewhere 3 buildings later. */
+  depleteCloud(c) {
+    if (c.depleted) return;
+    c.depleted = true;
+    c.canScore = false;
+    c.hideBadge();
+    this.addTween({
+      duration: 0.9,
+      update: (t) => c.regular.scale.setScalar(1 - t * 0.99),
+      done: () => { c.regular.visible = false; },
+    });
+    this.reforms.push({ cloud: c, wait: 3 });
+  }
+
+  tickClouds() {
+    for (let i = this.reforms.length - 1; i >= 0; i--) {
+      if (--this.reforms[i].wait > 0) continue;
+      this.reformCloud(this.reforms[i].cloud);
+      this.reforms.splice(i, 1);
+    }
+  }
+
+  reformCloud(c) {
+    const hf = this.assets.heightfield;
+    const p = new THREE.Vector3();
+    for (let tries = 0; tries < 40; tries++) {
+      p.set(-0.5 + Math.random(), 0.26 + Math.random() * 0.3, -0.45 + Math.random() * 0.83);
+      const clear = p.y > hf.at(p.x, p.z) + 0.12
+        && this.clouds.every((o) => o === c || o.depleted || o.root.position.distanceTo(p) > 0.2);
+      if (clear) break;
+    }
+    c.root.position.copy(p);
+    c.regular.visible = true;
+    c.depleted = false;
+    c.canScore = true;
+    this.addTween({ duration: 1.2, update: (t) => c.regular.scale.setScalar(0.01 + 0.99 * easeOutQuad(t)) });
+  }
+
+  /** A dust ring where a building lands. */
+  puff(pos) {
+    const m = new THREE.Mesh(this.ringGeometry, new THREE.MeshBasicMaterial({ color: 0xffe9c4, transparent: true, opacity: 0.7, depthWrite: false }));
+    m.position.copy(pos);
+    m.position.y -= 0.02;
+    m.raycast = () => {};
+    this.board.add(m);
+    this.addTween({
+      duration: 0.5,
+      update: (t) => { m.scale.setScalar(0.03 + 0.07 * t); m.material.opacity = 0.7 * (1 - t); },
+      done: () => { m.removeFromParent(); m.material.dispose(); },
+    });
   }
 
   addBuilding(b) {
@@ -492,7 +706,7 @@ export class Game {
     const toBoard = new THREE.Matrix4().copy(this.board.matrixWorld).invert();
     const buckets = new Map();
     for (const b of this.buildings) {
-      if (!b.isResource) continue;
+      if (!b.isResource || b.isAir) continue;
       b.regular.updateMatrixWorld(true);
       b.regular.traverse((o) => {
         if (!o.isMesh) return;
@@ -512,11 +726,6 @@ export class Game {
       const mesh = new THREE.Mesh(merged, material);
       mesh.name = 'Resources';
       mesh.raycast = () => {};
-      if (material.name === 'Cloud') {
-        // clouds bob gently (the visual only: their scoring position stays put)
-        mesh.userData.animated = true;
-        mesh.userData.update = (t) => { mesh.position.y = Math.sin(t * 0.8) * 0.005; };
-      }
       this.board.add(mesh);
     }
   }
@@ -573,6 +782,8 @@ export class Game {
   sfx(name) { this.audio?.play(name); }
 
   update(dt) {
+    this.time += dt;
+    for (const c of this.clouds) c.regular.position.y = Math.sin(this.time * 0.8 + c.phase) * 0.005;
     for (const b of this.buildings) b.update(dt);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const t = this.tweens[i];

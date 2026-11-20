@@ -47,19 +47,32 @@ The board has height to play with, so building high can pay off:
 - **Terrain:** two mesas along the far edge (20 cm tall at board scale), a canyon between them, a ledge
   on the far left and a rock pillar in the valley. Their walls are too steep to build on.
 - **Crystal veins** stick out of the walls (9 of them). The **Cliff Drill** earns +9 next to one.
-- **Ice clouds** float above the board (6). The **Weather Station** earns +8 near one, the **Wind Turbine** +5.
+- **Ice clouds** float above the board (6). The **Weather Station** earns +10 near one and uses it up: the
+  cloud fades, then forms again somewhere else after three more buildings. The **Wind Turbine** earns +5 near
+  a cloud and does not use it up.
 - **Height:** the Wind Turbine earns +1 for every 2.5 cm it stands above the valley floor.
 - **Sky Platform:** a tall, cheap stand with one beam. Other buildings can be built on top of it, which is
   the cheap way to reach clouds and high veins.
-- **Beam cost** is per building (`beamCost`, money per game unit): 100 by default, 30 for the Sky
-  Platform, 60 for the Wind Turbine and the Cliff Drill.
+- **Beam cost** is per building (`beamCost`, money per game unit): 100 by default, 20 for the Sky
+  Platform, 40 for the Cliff Drill and 60 for the Wind Turbine.
 
 The new buildings use models from the same low-poly space kit as the Unity buildings. Veins and clouds
 are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by the terrain shader
 (`addRockStrata` in `src/assets.js`). Shapes and positions are set in `cliffHeight`, `VEINS` and `CLOUDS` in
 `tools/bake.js`.
 
-Buildings, scoring and hand presets that are not in Unity live in **`data/expansion.json`**, which is merged
+### Milestones and packs
+
+**Score** counts every point placements earned or lost; it is separate from the budget. At score
+milestones (20, 50, 90, 140, 200, then every 80) the sign above the budget offers two building **packs**;
+pick one by pinching, pointing or clicking it. The next hand comes from that pack, and its hand presets
+join the deck. The game starts with Unity's 10 hand presets. Once all three packs (Highlander, Skywatch,
+Cliffside) are unlocked, a milestone pays +30 budget instead. Add **`?unlock`** to the address to start
+with every pack.
+
+Placing a building gives a small squash-and-stretch and a dust ring.
+
+Buildings, scoring, packs, milestones and hand presets that are not in Unity live in **`data/expansion.json`**, which is merged
 into the exported `data/game-data.json` at load time (`src/expansion.js`).
 
 To change the board's size or flatness, edit `SANDBOX` in `tools/bake.js` and bake again.

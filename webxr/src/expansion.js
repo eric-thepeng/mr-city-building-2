@@ -1,4 +1,4 @@
-// Merges data/expansion.json (hand-made buildings, nodes and hand presets) into the
+// Merges data/expansion.json (hand-made buildings, nodes, packs and milestones) into the
 // data exported from Unity (data/game-data.json). Used by the game and by tools/bake.js.
 
 /** Expansion meshes give `scale` and `at`; turn them into the exported matrix form. */
@@ -15,6 +15,11 @@ export function mergeExpansion(data, ext) {
   for (const [key, add] of Object.entries(ext.scoringAdd ?? {})) {
     Object.assign(data.buildingInfo[key].scoring, add);
   }
-  data.handPresets.push(...(ext.handPresets ?? []));
+  // The Unity hand presets are always in play. The new ones come in packs, which are
+  // unlocked one at a time at score milestones.
+  const byName = new Map((ext.handPresets ?? []).map((p) => [p.name, p]));
+  data.packs = (ext.packs ?? []).map((p) => ({ ...p, presets: p.presets.map((n) => byName.get(n)) }));
+  data.milestones = ext.milestones ?? [];
+  data.milestoneBonus = ext.milestoneBonus ?? 0;
   return data;
 }

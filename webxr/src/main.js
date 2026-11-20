@@ -94,6 +94,10 @@ async function main() {
   game.audio = makeAudio();
   game.events.addEventListener('money', (e) => { $('budget').textContent = e.amount; });
   game.events.addEventListener('hand', (e) => { $('hand').textContent = e.preset.name.replace('_', ' '); });
+  game.events.addEventListener('score', (e) => { $('score').textContent = `${e.score} / ${e.next}`; });
+  // ?unlock: every building pack from the start (skips the milestones, for trying things out)
+  game.progress.unlockAll = params.has('unlock');
+  game.progress.reset();
   game.start();
 
   // ---------------------------------------------------------------- input
@@ -124,7 +128,7 @@ async function main() {
   // ?fps: frame rate and frame time on a small sign above the budget (for on-device checks)
   const fpsLabel = params.has('fps') ? new Label({ height: 0.012 * game.ui, billboard: false }) : null;
   if (fpsLabel) {
-    fpsLabel.mesh.position.set(0, 0.045 * game.ui, 0);
+    fpsLabel.mesh.position.set(0, 0.15 * game.ui, 0);
     game.money.anchor.add(fpsLabel.mesh);
   }
   let fpsFrames = 0;
@@ -317,6 +321,7 @@ function makeAudio() {
     build: [[523, 0], [784, 0.08]],
     fail: [[220, 0], [180, 0.1]],
     coin: [[988, 0], [1319, 0.05]],
+    milestone: [[659, 0], [784, 0.1], [1047, 0.2], [1319, 0.3]],
   };
   return {
     play(name) {
