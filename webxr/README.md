@@ -41,6 +41,27 @@ The Unity game surrounded the player with a large landscape. Here it is a **sand
   facing you. **Recenter** (under the budget sign) moves it in front of you again; **New game** restarts.
 - **Hand:** the buildings in your hand wait along the near edge of the board.
 
+### Going up: cliffs, clouds and crystal veins
+
+The board has height to play with, so building high can pay off:
+- **Terrain:** two mesas along the far edge (20 cm tall at board scale), a canyon between them, a ledge
+  on the far left and a rock pillar in the valley. Their walls are too steep to build on.
+- **Crystal veins** stick out of the walls (9 of them). The **Cliff Drill** earns +9 next to one.
+- **Ice clouds** float above the board (6). The **Weather Station** earns +8 near one, the **Wind Turbine** +5.
+- **Height:** the Wind Turbine earns +1 for every 2.5 cm it stands above the valley floor.
+- **Sky Platform:** a tall, cheap stand with one beam. Other buildings can be built on top of it, which is
+  the cheap way to reach clouds and high veins.
+- **Beam cost** is per building (`beamCost`, money per game unit): 100 by default, 30 for the Sky
+  Platform, 60 for the Wind Turbine and the Cliff Drill.
+
+The new buildings use models from the same low-poly space kit as the Unity buildings. Veins and clouds
+are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by the terrain shader
+(`addRockStrata` in `src/assets.js`). Shapes and positions are set in `cliffHeight`, `VEINS` and `CLOUDS` in
+`tools/bake.js`.
+
+Buildings, scoring and hand presets that are not in Unity live in **`data/expansion.json`**, which is merged
+into the exported `data/game-data.json` at load time (`src/expansion.js`).
+
 To change the board's size or flatness, edit `SANDBOX` in `tools/bake.js` and bake again.
 Its placement in front of you is set by `BOARD_DISTANCE` / `BOARD_BELOW_EYES` in `src/main.js`.
 
@@ -130,7 +151,8 @@ copies the FBX sources into `assets/`, and writes 256 px textures to `data/textu
 python webxr/tools/bake_server.py
 ```
 
-Then open <http://localhost:8124/tools/bake.html>. The page loads the FBX files once and writes
+Then open <http://localhost:8124/tools/bake.html>. (`/tools/preview.html?m=dome,lander_A` shows models from the
+space kit side by side.) The page loads the FBX files once and writes
 `data/world.glb` (all building and resource models, and the sandbox terrain) and `data/board.json`
 (the sandbox heightfield and where the resource nodes sit on it).
 To change the sandbox, edit `SANDBOX` at the top of `tools/bake.js` and bake again.

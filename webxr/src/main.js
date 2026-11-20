@@ -5,6 +5,7 @@ import { Game } from './game.js';
 import { XRInput, MouseInput } from './input.js';
 import { Label, updateBillboards } from './ui.js';
 import { batchJointPoses } from './xr-perf.js';
+import { mergeExpansion } from './expansion.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -31,7 +32,8 @@ const BOARD_BELOW_EYES = 0.45;
 async function main() {
   if (params.has('emulate')) await installEmulator();
   batchJointPoses(); // hand joints without per-frame garbage (see xr-perf.js)
-  const data = await (await fetch('data/game-data.json')).json();
+  const [data, expansion] = await Promise.all(['data/game-data.json', 'data/expansion.json'].map((u) => fetch(u).then((r) => r.json())));
+  mergeExpansion(data, expansion); // buildings and nodes added after the Unity export
   const assets = new AssetLibrary(data);
   await assets.load((p) => { $('progress').style.width = `${Math.round(p * 100)}%`; });
 
@@ -218,6 +220,8 @@ async function main() {
   document.body.classList.add('loaded');
   window.__game = game; // handy for debugging in the console
   window.__xrInput = xrInput;
+  window.__renderer = renderer;
+  window.__camera = camera;
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;

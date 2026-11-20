@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>model preview</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body style="margin:0; background:#222">
+  <script type="module">
+    // Dev tool: shows Space-kit models side by side, with the game's texture, to pick new buildings.
+    // python webxr/tools/bake_server.py, then open /tools/preview.html?m=windturbine_tall,dome,...
+    import * as THREE from 'three';
+    import { FbxLibrary } from './fbx-library.js';
+    const names = (new URLSearchParams(location.search).get('m') || 'windturbine_tall').split(',');
+    const data = { environment: { static: [], resources: [] }, blocks: {}, fbxUnitScale: {} };
+    const entries = names.map((n) => ({ fbx: `assets/Models/Space/${n}.fbx`, mats: [], m: new THREE.Matrix4().toArray() }));
+    data.blocks.all = { meshes: entries };
+    const lib = new FbxLibrary(data, '../');
+    await lib.load();
+    const tex = await new THREE.TextureLoader().loadAsync('../data/textures/spacebits_texture.png');
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const mat = new THREE.MeshLambertMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.45 });
+    const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    const cols = Math.min(names.length, 5);
+    const rows = Math.ceil(names.length / cols);
+    renderer.setSize(cols * 240, rows * 260);
+    document.body.appendChild(renderer.domElement);
+    renderer.setScissorTest(true);
+    const info = [];
+    names.forEach((n, i) => {
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x30343c);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x445566, 1.6), new THREE.DirectionalLight(0xffffff, 1.5));
+      const g = lib.build([entries[i]]);
+      g.traverse((o) => { if (o.isMesh) o.material = mat; });
+      scene.add(g);
+      const box = new THREE.Box3().setFromObject(g);
+      const size = box.getSize(new THREE.Vector3());
+      const c = box.getCenter(new THREE.Vector3());
+      const r = size.length() * 0.75;
+      const cam = new THREE.PerspectiveCamera(35, 240 / 260, 0.01, 100);
+      cam.position.copy(c).add(new THREE.Vector3(r * 1.2, r * 0.9, r * 1.5));
+      cam.lookAt(c);
+      const x = (i % cols) * 240;
+      const y = (rows - 1 - Math.floor(i / cols)) * 260;
+      renderer.setViewport(x, y, 240, 260);
+      renderer.setScissor(x, y, 240, 260);
+      renderer.render(scene, cam);
+      info.push(`${n}: ${size.toArray().map((v) => v.toFixed(2)).join(' x ')} min y ${box.min.y.toFixed(2)}`);
+    });
+    window.__info = info;
+    document.title = 'ready';
+  </script>
+</body>
+</html>

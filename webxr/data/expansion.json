@@ -1,0 +1,63 @@
+{
+  "about": "Hand-made content on top of game-data.json (which is exported from Unity). Merged by src/expansion.js. Units are game units (Unity metres); the board is shown at half size.",
+  "blocks": {
+    "WindTurbine": {
+      "key": "WindTurbine", "maxBeamLength": 0.25, "beamCost": 60,
+      "meshes": [{ "fbx": "assets/Models/Space/windturbine_tall.fbx", "scale": 0.04, "at": [0, -0.02, 0] }],
+      "beams": [[0, -0.02, 0]]
+    },
+    "SkyPlatform": {
+      "key": "SkyPlatform", "maxBeamLength": 0.3, "beamCost": 30,
+      "meshes": [
+        { "fbx": "assets/Models/Space/structure_tall.fbx", "scale": 0.045, "at": [0, -0.02, 0] },
+        { "fbx": "assets/Models/Space/landingpad_small.fbx", "scale": 0.045, "at": [0, 0.064, 0] }
+      ],
+      "beams": [[0, -0.02, 0]]
+    },
+    "WeatherStation": {
+      "key": "WeatherStation", "maxBeamLength": 0.1,
+      "meshes": [{ "fbx": "assets/Models/Space/lander_A.fbx", "scale": 0.04, "at": [0, -0.02, 0] }],
+      "beams": [[0.018, -0.02, 0.018], [-0.018, -0.02, 0.018], [0.018, -0.02, -0.018], [-0.018, -0.02, -0.018]]
+    },
+    "CliffDrill": {
+      "key": "CliffDrill", "maxBeamLength": 0.2, "beamCost": 60,
+      "meshes": [{ "fbx": "assets/Models/Space/lander_B.fbx", "scale": 0.04, "at": [0, -0.02, 0] }],
+      "beams": [[0.018, -0.02, 0.018], [-0.018, -0.02, 0.018], [0.018, -0.02, -0.018], [-0.018, -0.02, -0.018]]
+    }
+  },
+  "buildingInfo": {
+    "WindTurbine": {
+      "displayName": "Wind Turbine", "detectDistance": 0.25,
+      "altitude": { "per": 0.05, "points": 1 },
+      "scoring": { "IceCloud": 5, "WindTurbine": -4, "LivingPod": 2, "Factory": 2 }
+    },
+    "SkyPlatform": {
+      "displayName": "Sky Platform", "detectDistance": 0.0,
+      "note": "Build on top of it",
+      "scoring": {}
+    },
+    "WeatherStation": {
+      "displayName": "Weather Station", "detectDistance": 0.2,
+      "scoring": { "IceCloud": 8, "WindTurbine": 2, "Farm": 2, "WeatherStation": -3 }
+    },
+    "CliffDrill": {
+      "displayName": "Cliff Drill", "detectDistance": 0.15,
+      "scoring": { "CrystalVein": 9, "Factory": 3, "Warehouse": 2, "CliffDrill": -2 }
+    },
+    "IceCloud": { "displayName": "Ice Cloud", "detectDistance": 0.0, "scoring": {} },
+    "CrystalVein": { "displayName": "Crystal Vein", "detectDistance": 0.0, "scoring": {} }
+  },
+  "scoringAdd": {
+    "Factory": { "CliffDrill": 4 },
+    "Warehouse": { "CliffDrill": 2, "WeatherStation": 1 },
+    "Farm": { "WeatherStation": 3 },
+    "LivingPod": { "WindTurbine": 2 }
+  },
+  "handPresets": [
+    { "name": "Highlander_01", "freeMoney": 0, "buildings": { "WindTurbine": 2, "SkyPlatform": 1 } },
+    { "name": "Skywatch_01", "freeMoney": 0, "buildings": { "WeatherStation": 2, "SkyPlatform": 1 } },
+    { "name": "Skywatch_02", "freeMoney": 0, "buildings": { "WeatherStation": 1, "WindTurbine": 1, "Farm": 2 } },
+    { "name": "Cliffside_01", "freeMoney": 0, "buildings": { "CliffDrill": 2, "SkyPlatform": 1 } },
+    { "name": "Cliffside_02", "freeMoney": 0, "buildings": { "CliffDrill": 2, "Factory": 1 } }
+  ]
+}

@@ -48,6 +48,11 @@ export class AssetLibrary {
     let mat;
     if (name === 'Terrain') {
       mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+      addRockStrata(mat);
+    } else if (name === 'Cloud') {
+      mat = new THREE.MeshLambertMaterial({ color: 0xf2f7ff, emissive: 0x8a96a8 });
+    } else if (name === 'Crystal') {
+      mat = new THREE.MeshLambertMaterial({ color: 0x8af4ff, emissive: 0x2aa6c4 });
     } else if (name === 'M_Glass') {
       // Unity's glass is 6% opaque. On Specs' see-through display that reads as a
       // missing lid, so use frosted, light-blue glass drawn on both sides.
@@ -98,6 +103,35 @@ export class AssetLibrary {
   terrain() {
     return this.instance('terrain');
   }
+}
+
+/**
+ * Steep terrain (cliff faces) gets horizontal rock bands, worked out per pixel from the
+ * face's slope and height, so the heightfield needs no extra vertices for them.
+ */
+function addRockStrata(mat) {
+  const uniforms = {
+    rockA: { value: new THREE.Color(0xe8a27e) },
+    rockB: { value: new THREE.Color(0xd08a68) },
+    rockLine: { value: new THREE.Color(0xb87456) },
+  };
+  mat.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace('void main() {', 'varying vec3 vBoardPos;\nvoid main() {')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvBoardPos = transformed;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', 'varying vec3 vBoardPos;\nuniform vec3 rockA;\nuniform vec3 rockB;\nuniform vec3 rockLine;\nvoid main() {')
+      .replace('#include <color_fragment>', `#include <color_fragment>
+	vec3 faceN = normalize(cross(dFdx(vBoardPos), dFdy(vBoardPos)));
+	float cliff = smoothstep(0.45, 0.75, 1.0 - abs(faceN.y));
+	float band = fract(vBoardPos.y / 0.034);
+	vec3 rock = band < 0.55 ? rockA : rockB;
+	rock = mix(rock, rockLine, step(0.92, band));
+	diffuseColor.rgb = mix(diffuseColor.rgb, rock, cliff);
+	totalEmissiveRadiance += rock * cliff * 0.3; // walls facing away from the sun stay light (dark = see-through on Specs)`);
+  };
+  mat.customProgramCacheKey = () => 'terrain-strata';
 }
 
 /** Ground height lookup on the baked sandbox grid, used for support beams. */

@@ -127,7 +127,8 @@ export class Building {
     this.root.add(this.collider);
     // what other buildings' beams can land on once this one is finished
     this.solids = [];
-    if (resource) this.regular.traverse((o) => o.isMesh && this.solids.push(o));
+    // (clouds are not ground: beams pass through them)
+    if (resource) { if (!resource.air) this.regular.traverse((o) => o.isMesh && this.solids.push(o)); }
     else this.solids.push(this.collider);
     const top = box.max.y;
 
@@ -216,6 +217,9 @@ export class Building {
     for (const [k, v] of Object.entries(this.info.scoring)) {
       lines.push(`${this.game.data.buildingInfo[k]?.displayName ?? k} ${v > 0 ? '+' : ''}${v}`);
     }
+    const alt = this.info.altitude;
+    if (alt) lines.push(`Height +${alt.points} per ${+(alt.per * BOARD_SCALE * 100).toFixed(1)} cm`);
+    if (this.info.note) lines.push(this.info.note);
     const panel = this.game.infoPanel;
     panel.set(lines.join('\n'));
     panel.mesh.position.set(0, this.top + 0.024 * this.game.ui, 0);
@@ -244,7 +248,7 @@ export class Building {
       this.nameLabel.set('can not build here', { fg: '#ff5a5a' });
       this.setDisplayState(false);
     } else {
-      this.currentCost = Math.trunc(total * 100);
+      this.currentCost = Math.trunc(total * (this.def.beamCost ?? 100)); // money per game unit of beam
       const affordable = this.currentCost <= money.amount;
       this.setDisplayState(affordable);
       this.nameLabel.set(`cost: ${this.currentCost}`, { fg: affordable ? '#ffffff' : '#ff5a5a' });
@@ -314,6 +318,13 @@ export class Building {
       } else {
         other.hideBadge();
       }
+    }
+    // some buildings (wind turbines) also earn for how high they stand above the valley floor
+    const alt = this.info.altitude;
+    if (alt) {
+      const a = Math.max(0, Math.floor((me.y - this.game.groundBase) / alt.per)) * alt.points;
+      sum += a;
+      if (harvest && a) this.sendAndAddScore(a);
     }
     this.showBadge(sum, true);
     return sum;
@@ -406,11 +417,20 @@ export class Game {
     this.board.add(terrain);
     scene.add(this.board);
     const layout = assets.board;
+    const hf = assets.heightfield;
     let maxH = 0;
-    for (const h of assets.heightfield.h) maxH = Math.max(maxH, h);
+    let minH = Infinity;
+    let nearH = 0; // highest point of the near rows, under the hand row
+    hf.h.forEach((h, k) => {
+      maxH = Math.max(maxH, h);
+      minH = Math.min(minH, h);
+      if (Math.floor(k / hf.nx) >= hf.nz - 6) nearH = Math.max(nearH, h);
+    });
     this.boardTop = maxH;
-    // hand row: just outside the near (+z) edge, a little above the terrain
-    this.spawnCenter = new THREE.Vector3(0, maxH + 0.08, layout.depth / 2 + 0.12);
+    // what "height" is measured from (a building standing on the valley floor is at 0)
+    this.groundBase = minH + 0.02;
+    // hand row: just outside the near (+z) edge, a little above the terrain there
+    this.spawnCenter = new THREE.Vector3(0, nearH + 0.08, layout.depth / 2 + 0.12);
 
     this.beamGeometry = new THREE.CylinderGeometry(0.003, 0.003, 1, 6);
     this.beamMaterial = new THREE.MeshLambertMaterial({ color: 0xc8cdd8, emissive: 0x404448 });
@@ -492,6 +512,11 @@ export class Game {
       const mesh = new THREE.Mesh(merged, material);
       mesh.name = 'Resources';
       mesh.raycast = () => {};
+      if (material.name === 'Cloud') {
+        // clouds bob gently (the visual only: their scoring position stays put)
+        mesh.userData.animated = true;
+        mesh.userData.update = (t) => { mesh.position.y = Math.sin(t * 0.8) * 0.005; };
+      }
       this.board.add(mesh);
     }
   }
