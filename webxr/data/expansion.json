@@ -66,8 +66,8 @@
   "milestones": [20, 50, 90, 140, 200],
   "milestoneBonus": 30,
   "packs": [
-    { "name": "Highlander", "displayName": "Highlander", "summary": "Wind Turbine, Sky Platform", "presets": ["Highlander_01", "Highlander_02"] },
-    { "name": "Skywatch", "displayName": "Skywatch", "summary": "Weather Station, Sky Platform", "presets": ["Skywatch_01", "Skywatch_02"] },
-    { "name": "Cliffside", "displayName": "Cliffside", "summary": "Cliff Drill, Sky Platform", "presets": ["Cliffside_01", "Cliffside_02"] }
+    { "name": "Highlander", "displayName": "Highlander", "blurb": "Build high: turbines earn for height", "summary": "Wind Turbine, Sky Platform", "presets": ["Highlander_01", "Highlander_02"] },
+    { "name": "Skywatch", "displayName": "Skywatch", "blurb": "Catch the ice clouds in the sky", "summary": "Weather Station, Sky Platform", "presets": ["Skywatch_01", "Skywatch_02"] },
+    { "name": "Cliffside", "displayName": "Cliffside", "blurb": "Mine the crystal veins on the cliffs", "summary": "Cliff Drill, Sky Platform", "presets": ["Cliffside_01", "Cliffside_02"] }
   ]
 }

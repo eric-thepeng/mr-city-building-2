@@ -48,7 +48,8 @@ The board has height to play with, so building high can pay off:
   on the far left and a rock pillar in the valley. Their walls are too steep to build on.
 - **Crystal veins** stick out of the walls (9 of them). The **Cliff Drill** earns +9 next to one.
 - **Ice clouds** float above the board (6). The **Weather Station** earns +10 near one and uses it up: the
-  cloud fades, then forms again somewhere else after three more buildings. The **Wind Turbine** earns +5 near
+  cloud is pulled into the station, and a see-through outline marks where it forms again, with a
+  countdown ("Cloud forms here in 3 builds"). The **Wind Turbine** earns +5 near
   a cloud and does not use it up.
 - **Height:** the Wind Turbine earns +1 for every 2.5 cm it stands above the valley floor.
 - **Sky Platform:** a tall, cheap stand with one beam. Other buildings can be built on top of it, which is
@@ -64,7 +65,9 @@ are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by 
 ### Milestones and packs
 
 **Score** counts every point placements earned or lost; it is separate from the budget. At score
-milestones (20, 50, 90, 140, 200, then every 80) the sign above the budget offers two building **packs**;
+milestones (20, 50, 90, 140, 200, then every 80) the sign above the budget offers two building **packs**
+(cards that show the new buildings turning on top, what each one scores, the bonuses they add to
+existing buildings, and the pack's hands; the text is generated from the data in `Progress.describe`);
 pick one by pinching, pointing or clicking it. The next hand comes from that pack, and its hand presets
 join the deck. The game starts with Unity's 10 hand presets. Once all three packs (Highlander, Skywatch,
 Cliffside) are unlocked, a milestone pays +30 budget instead. Add **`?unlock`** to the address to start

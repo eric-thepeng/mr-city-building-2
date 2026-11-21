@@ -86,20 +86,25 @@ class Progress {
     const anchor = game.money.anchor;
     this.label = new Label({ height: 0.013 * ui, bg: 'rgba(16,20,34,0.85)', fg: '#9fe0ff', billboard: false });
     this.label.mesh.position.set(0, 0.034 * ui, 0);
-    this.title = new Label({ height: 0.013 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false });
-    this.title.mesh.position.set(0, 0.122 * ui, 0);
+    this.title = new Label({ height: 0.014 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false });
     this.title.visible = false;
     anchor.add(this.label.mesh, this.title.mesh);
-    this.options = [-1, 1].map((side) => {
-      const label = new Label({ height: 0.014 * ui, bg: 'rgba(45,108,223,0.95)', billboard: false });
-      label.mesh.position.set(side * 0.085 * ui, 0.078 * ui, 0);
-      label.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
-      label.visible = false;
-      anchor.add(label.mesh);
-      const option = { label, pack: null };
-      game.addButton(label.mesh, () => { if (option.pack) this.choose(option.pack); });
+    // Two pack cards side by side, each with the pack's new buildings standing on top of it.
+    this.options = [0, 1].map(() => {
+      const card = new Label({
+        height: 0.0105 * ui, bg: 'rgba(28,70,160,0.95)', fg: '#ffffff', accent: '#ffe27a', align: 'left', billboard: false,
+      });
+      card.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
+      card.visible = false;
+      const models = new THREE.Group();
+      models.visible = false;
+      anchor.add(card.mesh, models);
+      const option = { card, models, pack: null };
+      game.addButton(card.mesh, () => { if (option.pack) this.choose(option.pack); });
       return option;
     });
+    // buildings that were in the game before the expansion (their packs add bonuses to them)
+    this.base = new Set(game.data.handPresets.flatMap((p) => Object.keys(p.buildings)));
     this.reset();
   }
 
@@ -149,20 +154,104 @@ class Progress {
     const n = this.game.data.milestoneBonus;
     this.game.money.gain(n);
     this.title.set(`Milestone! +${n} budget`);
+    this.title.mesh.position.set(0, 0.075 * this.game.ui, 0);
     this.title.visible = true;
     this.game.addTween({ duration: 2.5, update: () => {}, done: () => { if (!this.offering) this.title.visible = false; } });
   }
 
+  /** The new buildings of a pack (the ones the base game does not have). */
+  newBuildings(pack) {
+    const keys = [...new Set(pack.presets.flatMap((p) => Object.keys(p.buildings)))];
+    return keys.filter((k) => !this.base.has(k));
+  }
+
+  /** The text on a pack's card: what each new building scores, what it adds to old ones, its hands. */
+  describe(pack) {
+    const info = this.game.data.buildingInfo;
+    const name = (k) => (info[k]?.displayName ?? k).replace(/([a-z])([A-Z])/g, '$1 $2'); // "LivingPod" -> "Living Pod"
+    const cm = (v) => +(v * BOARD_SCALE * 100).toFixed(1);
+    const fresh = this.newBuildings(pack);
+    const lines = [`#${pack.displayName.toUpperCase()}`, pack.blurb ?? pack.summary];
+    for (const k of fresh) {
+      const b = info[k];
+      lines.push(b.detectDistance > 0 ? `#${b.displayName} · range ${cm(b.detectDistance)} cm` : `#${b.displayName}`);
+      if (b.altitude) lines.push(`  +${b.altitude.points} for every ${cm(b.altitude.per)} cm of height`);
+      const entries = Object.entries(b.scoring).sort((x, y) => y[1] - x[1]);
+      const fmt = ([o, v]) => `${name(o)} ${v > 0 ? '+' : '−'}${Math.abs(v)}${b.consumes?.includes(o) ? ' (uses it up)' : ''}`;
+      const good = entries.filter(([, v]) => v > 0).map(fmt);
+      const bad = entries.filter(([, v]) => v < 0).map(fmt);
+      for (let i = 0; i < good.length; i += 2) lines.push(`  ${i ? '' : 'Near: '}${good.slice(i, i + 2).join(', ')}`);
+      if (bad.length) lines.push(`  Crowded: ${bad.join(', ')}`);
+      if (!entries.length && b.note) lines.push(`  ${b.note}`);
+    }
+    // old buildings that now earn next to the new ones
+    const liked = [];
+    for (const [k, b] of Object.entries(info)) {
+      if (!this.base.has(k)) continue;
+      for (const f of fresh) if ((b.scoring[f] ?? 0) > 0) liked.push(`${name(k)} +${b.scoring[f]} near ${name(f)}`);
+    }
+    if (liked.length) {
+      lines.push('#Also');
+      for (const l of liked) lines.push(`  ${l}`);
+    }
+    lines.push('#Hands');
+    for (const p of pack.presets) {
+      lines.push(`  ${Object.entries(p.buildings).map(([k, n]) => `${n > 1 ? `${n}× ` : ''}${name(k)}`).join(' + ')}`);
+    }
+    return lines.join('\n');
+  }
+
+  /** Small copies of the pack's new buildings, turning slowly on top of its card. */
+  fillModels(group, pack) {
+    for (const c of [...group.children]) c.removeFromParent();
+    const keys = this.newBuildings(pack);
+    const box = new THREE.Box3();
+    const size = new THREE.Vector3();
+    const gap = 0.075 * this.game.ui;
+    keys.forEach((k, i) => {
+      const m = this.game.assets.instance(`block_${k}`);
+      box.setFromObject(m, true);
+      box.getSize(size);
+      const s = Math.min(1.3, (0.05 * this.game.ui) / Math.max(size.y, 0.001));
+      m.scale.setScalar(s);
+      const holder = new THREE.Group();
+      holder.add(m);
+      m.position.y = -box.min.y * s; // stand on the card
+      holder.position.x = (i - (keys.length - 1) / 2) * gap;
+      holder.userData.spin = true;
+      group.add(holder);
+    });
+  }
+
   offer(locked) {
+    const ui = this.game.ui;
     const picks = [...locked].sort(() => Math.random() - 0.5).slice(0, 2);
     this.offering = true;
-    this.title.set('Milestone! Pick a new pack');
-    this.title.visible = true;
-    this.options.forEach((o, i) => {
-      o.pack = picks[i] ?? null;
-      if (o.pack) o.label.set(`${o.pack.displayName}\n${o.pack.summary}`);
-      o.label.visible = !!o.pack;
+    const shown = this.options.filter((o, i) => (o.pack = picks[i] ?? null));
+    for (const o of this.options) {
+      o.card.visible = !!o.pack;
+      o.models.visible = !!o.pack;
+      if (!o.pack) continue;
+      o.card.set(this.describe(o.pack));
+      this.fillModels(o.models, o.pack);
+    }
+    // lay the cards out from their real sizes so they never overlap
+    const base = 0.052 * ui;
+    const gap = 0.012 * ui;
+    const widths = shown.map((o) => o.card.mesh.scale.x);
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (shown.length - 1);
+    let x = -total / 2;
+    let top = 0;
+    shown.forEach((o, i) => {
+      const { x: w, y: h } = o.card.mesh.scale;
+      o.card.mesh.position.set(x + w / 2, base + h / 2, 0);
+      o.models.position.set(x + w / 2, base + h + 0.004 * ui, 0.01 * ui);
+      x += w + gap;
+      top = Math.max(top, h);
     });
+    this.title.set('Milestone! Tap a pack to add it');
+    this.title.mesh.position.set(0, base + top + 0.085 * ui, 0);
+    this.title.visible = true;
   }
 
   choose(pack) {
@@ -183,9 +272,15 @@ class Progress {
     this.offering = false;
     this.title.visible = false;
     for (const o of this.options) {
-      o.label.visible = false;
+      o.card.visible = false;
+      o.models.visible = false;
       o.pack = null;
     }
+  }
+
+  update(dt) {
+    if (!this.offering) return;
+    for (const o of this.options) for (const h of o.models.children) h.rotation.y += dt * 0.8;
   }
 
   updateUI() {
@@ -441,7 +536,7 @@ export class Building {
         other.showBadge(s, false);
         if (harvest) {
           other.sendAndAddScore(s);
-          if (s > 0 && this.info.consumes?.includes(other.key)) this.game.depleteCloud(other);
+          if (s > 0 && this.info.consumes?.includes(other.key)) this.game.depleteCloud(other, this);
         }
       } else {
         other.hideBadge();
@@ -622,9 +717,11 @@ export class Game {
     this.tweens.length = 0;
     this.money.amount = this.data.startingMoney;
     this.money.updateUI();
+    for (const r of this.reforms) this.removeGhost(r.ghost);
     this.reforms.length = 0;
     for (const c of this.clouds) {
       c.root.position.copy(c.home);
+      c.regular.rotation.y = 0;
       c.regular.scale.setScalar(1);
       c.regular.visible = true;
       c.depleted = false;
@@ -640,41 +737,105 @@ export class Game {
     this.buttons.push({ mesh, onPress });
   }
 
-  /** A Weather Station took this cloud: it fades out and forms again elsewhere 3 buildings later. */
-  depleteCloud(c) {
+  /**
+   * A Weather Station took this cloud: it is pulled into the station and vanishes. A faint
+   * outline shows where it will form again, with a countdown of buildings.
+   */
+  depleteCloud(c, by) {
     if (c.depleted) return;
     c.depleted = true;
     c.canScore = false;
     c.hideBadge();
+    const from = c.root.position.clone();
+    const to = by.root.position.clone();
+    to.y += by.top;
+    const spot = this.cloudSpot(c);
+    const wait = 3;
+    const ghost = this.cloudGhost(c, spot, wait);
+    const entry = { cloud: c, wait, ghost };
+    this.reforms.push(entry);
+    this.sfx('cloud');
     this.addTween({
-      duration: 0.9,
-      update: (t) => c.regular.scale.setScalar(1 - t * 0.99),
-      done: () => { c.regular.visible = false; },
+      duration: 1.3,
+      update: (t) => {
+        const e = t * t;
+        c.root.position.lerpVectors(from, to, e);
+        c.regular.scale.setScalar(1 - 0.97 * e);
+        c.regular.rotation.y = t * 7;
+      },
+      done: () => {
+        c.regular.visible = false;
+        c.regular.rotation.y = 0;
+        c.root.position.copy(spot);
+        if (this.reforms.includes(entry)) ghost.visible = true;
+      },
     });
-    this.reforms.push({ cloud: c, wait: 3 });
+  }
+
+  /** A free spot in the air: above the terrain, away from the other clouds. */
+  cloudSpot(c) {
+    const hf = this.assets.heightfield;
+    const p = new THREE.Vector3();
+    const taken = [
+      ...this.clouds.filter((o) => o !== c && !o.depleted).map((o) => o.root.position),
+      ...this.reforms.map((r) => r.ghost.position),
+    ];
+    for (let tries = 0; tries < 40; tries++) {
+      p.set(-0.5 + Math.random(), 0.26 + Math.random() * 0.3, -0.45 + Math.random() * 0.83);
+      if (p.y > hf.at(p.x, p.z) + 0.12 && taken.every((q) => q.distanceTo(p) > 0.2)) break;
+    }
+    return p;
+  }
+
+  /** A see-through copy of the cloud and a "back in N builds" sign. */
+  cloudGhost(c, spot, wait) {
+    this.ghostMaterial ??= new THREE.MeshBasicMaterial({ color: 0xcfe6ff, transparent: true, opacity: 0.4, depthWrite: false });
+    const g = new THREE.Group();
+    const model = this.assets.instance(c.modelName);
+    model.traverse((o) => {
+      if (!o.isMesh) return;
+      o.material = this.ghostMaterial;
+      o.raycast = () => {};
+    });
+    const label = new Label({ height: 0.011 * this.ui, bg: 'rgba(16,20,34,0.85)', fg: '#cfe9ff' });
+    label.mesh.position.y = 0.045;
+    g.add(model, label.mesh);
+    g.userData.label = label;
+    g.position.copy(spot);
+    g.visible = false;
+    this.board.add(g);
+    this.setGhostText(g, wait);
+    return g;
+  }
+
+  setGhostText(g, wait) {
+    g.userData.label.set(`Cloud forms here in ${wait} build${wait > 1 ? 's' : ''}`);
+  }
+
+  removeGhost(g) {
+    g.removeFromParent();
+    g.userData.label.dispose();
   }
 
   tickClouds() {
     for (let i = this.reforms.length - 1; i >= 0; i--) {
-      if (--this.reforms[i].wait > 0) continue;
-      this.reformCloud(this.reforms[i].cloud);
+      const r = this.reforms[i];
+      if (--r.wait > 0) {
+        this.setGhostText(r.ghost, r.wait);
+        continue;
+      }
+      this.removeGhost(r.ghost);
+      this.reformCloud(r.cloud, r.ghost.position);
       this.reforms.splice(i, 1);
     }
   }
 
-  reformCloud(c) {
-    const hf = this.assets.heightfield;
-    const p = new THREE.Vector3();
-    for (let tries = 0; tries < 40; tries++) {
-      p.set(-0.5 + Math.random(), 0.26 + Math.random() * 0.3, -0.45 + Math.random() * 0.83);
-      const clear = p.y > hf.at(p.x, p.z) + 0.12
-        && this.clouds.every((o) => o === c || o.depleted || o.root.position.distanceTo(p) > 0.2);
-      if (clear) break;
-    }
-    c.root.position.copy(p);
+  reformCloud(c, spot) {
+    c.root.position.copy(spot);
     c.regular.visible = true;
     c.depleted = false;
     c.canScore = true;
+    this.sfx('cloud');
     this.addTween({ duration: 1.2, update: (t) => c.regular.scale.setScalar(0.01 + 0.99 * easeOutQuad(t)) });
   }
 
@@ -785,6 +946,7 @@ export class Game {
     this.time += dt;
     for (const c of this.clouds) c.regular.position.y = Math.sin(this.time * 0.8 + c.phase) * 0.005;
     for (const b of this.buildings) b.update(dt);
+    this.progress.update(dt);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const t = this.tweens[i];
       if (t.cancelled) { this.tweens.splice(i, 1); continue; }

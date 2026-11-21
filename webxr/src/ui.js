@@ -22,9 +22,13 @@ export class Label {
    * @param {string} opts.bg       CSS background colour
    * @param {string} opts.fg       CSS text colour
    * @param {boolean} opts.billboard  face the camera every frame
+   * @param {'center'|'left'} opts.align  text alignment
+   * @param {string} opts.accent  heading colour: a line starting with '#' is drawn bold in it
    */
-  constructor({ height = 0.02, bg = 'rgba(20,24,38,0.85)', fg = '#fff', font = 600, billboard = true, depthTest = true, renderOrder = 10 } = {}) {
+  constructor({ height = 0.02, bg = 'rgba(20,24,38,0.85)', fg = '#fff', font = 600, billboard = true, depthTest = true, renderOrder = 10, align = 'center', accent = null } = {}) {
     this.height = height;
+    this.align = align;
+    this.accent = accent;
     this.bg = bg;
     this.fg = fg;
     this.font = font;
@@ -62,14 +66,19 @@ export class Label {
       ctx = canvas.getContext('2d');
     }
     const DPR = Label.resolution;
-    const lines = String(text).split('\n');
     const px = Math.round(32 * DPR);
     const font = `${this.font} ${px}px ${FONT}`;
-    ctx.font = font;
+    const headFont = `800 ${px}px ${FONT}`;
+    const lines = String(text).split('\n').map((l) => (l.startsWith('#') && this.accent
+      ? { text: l.slice(1), font: headFont, fg: this.accent }
+      : { text: l, font, fg: null }));
     const pad = 16 * DPR;
     const lineH = px * 1.2;
     let textW = 0;
-    for (const l of lines) textW = Math.max(textW, ctx.measureText(l).width);
+    for (const l of lines) {
+      ctx.font = l.font;
+      textW = Math.max(textW, ctx.measureText(l.text).width);
+    }
     const w = Math.ceil(textW + pad * 2);
     const h = Math.ceil(lineH * lines.length + pad * 1.2);
     // Reuse the GPU texture when the new text fits (a cost label changes many
@@ -89,10 +98,14 @@ export class Label {
     ctx.fillStyle = bg;
     roundRect(ctx, 0, 0, w, h, 14 * DPR);
     ctx.fill();
-    ctx.fillStyle = fg;
-    ctx.textAlign = 'center';
+    const left = this.align === 'left';
+    ctx.textAlign = left ? 'left' : 'center';
     ctx.textBaseline = 'middle';
-    lines.forEach((l, i) => ctx.fillText(l, w / 2, pad * 0.6 + lineH * (i + 0.5)));
+    lines.forEach((l, i) => {
+      ctx.font = l.font;
+      ctx.fillStyle = l.fg ?? fg;
+      ctx.fillText(l.text, left ? pad : w / 2, pad * 0.6 + lineH * (i + 0.5));
+    });
     if (grow) {
       this.texture?.dispose();
       this.texture = new THREE.Texture(canvas);
