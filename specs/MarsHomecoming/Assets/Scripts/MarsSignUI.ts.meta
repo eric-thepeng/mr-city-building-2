@@ -1,0 +1,54 @@
+- !<AssetImportMetadata/55b9fc65-fa6b-4585-b1ed-914d86289cc4>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> cd131e82-6f67-472e-8867-c0c92d09f94c
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> cd131e82-6f67-472e-8867-c0c92d09f94c
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 451a0bf4-139d-431c-bdd3-8dbbb74d4991
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/451a0bf4-139d-431c-bdd3-8dbbb74d4991>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  RunInEditor: false
+  ComponentUid: 81066c19-003e-4a43-9aa4-32db459469f1
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    buttonSize: false
+    width: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - width: !<float> 22.000000
+      buttonSize: !<Vec2> {x: 9.000000, y: 3.000000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MarsSignUI – budget sign with New game / Recenter</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float width = 22 {"hint":"Inner width of the sign in cm", "widget":"slider", "min":14, "max":40, "step":1}'
+    - '// @input vec2 buttonSize = {9,3} {"hint":"Size of the New game / Recenter buttons in cm (width, height)"}'
+    - '// @ui {"widget":"group_end"}'

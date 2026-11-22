@@ -1,0 +1,111 @@
+- !<AssetImportMetadata/2b641ea9-79b5-4bea-8f8b-c4def51f281e>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> b4d8cf2e-a334-4599-8806-dfc44d7822cd
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> b4d8cf2e-a334-4599-8806-dfc44d7822cd
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 7b322611-729a-4747-afd6-62bbb0ffb7cf
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/7b322611-729a-4747-afd6-62bbb0ffb7cf>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  RunInEditor: false
+  ComponentUid: 149b3910-0248-4406-a614-66c276939cdb
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    board: false
+    boardBelowEyes: false
+    boardData: false
+    boardDistance: false
+    camera: false
+    choiceUI: false
+    debugColliders: false
+    expansionData: false
+    firstHand: false
+    gameData: false
+    modelLibrary: false
+    sfxBuild: false
+    sfxCloud: false
+    sfxCoin: false
+    sfxFail: false
+    sfxMilestone: false
+    signUI: false
+    startWithChoice: false
+    unlockAllPacks: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - camera: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      board: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      modelLibrary: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      signUI: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      choiceUI: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      gameData: !<reference.JsonAsset> 00000000-0000-0000-0000-000000000000
+      expansionData: !<reference.JsonAsset> 00000000-0000-0000-0000-000000000000
+      boardData: !<reference.JsonAsset> 00000000-0000-0000-0000-000000000000
+      boardDistance: !<float> 75.000000
+      boardBelowEyes: !<float> 45.000000
+      unlockAllPacks: false
+      debugColliders: false
+      startWithChoice: false
+      firstHand: ""
+      sfxBuild: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      sfxFail: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      sfxCoin: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      sfxMilestone: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+      sfxCloud: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MarsMain – Mars Homecoming sandbox</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"References"}'
+    - '// @input SceneObject camera {"hint":"The camera (Camera Object with Device Tracking)"}'
+    - '// @input SceneObject board {"hint":"Board: terrain, resources and buildings live here, scaled to 50 cm per game unit"}'
+    - '// @input SceneObject modelLibrary {"hint":"Disabled instance of Models/world.glb; buildings and resources are copied from it by node name"}'
+    - '// @input AssignableType_1 signUI {"hint":"Budget sign (MarsSignUI)"}'
+    - '// @input AssignableType_2 choiceUI {"hint":"Choice panel in the hand row (MarsChoiceUI)"}'
+    - '// @input Asset.JsonAsset gameData {"hint":"game-data.json (exported from Unity)"}'
+    - '// @input Asset.JsonAsset expansionData {"hint":"expansion.json (hand-made buildings, packs, milestones)"}'
+    - '// @input Asset.JsonAsset boardData {"hint":"board.json (heightfield and resource nodes)"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float boardDistance = 75 {"hint":"Distance from the eyes to the centre of the board, in cm", "widget":"slider", "min":40, "max":150, "step":1}'
+    - '// @input float boardBelowEyes = 45 {"hint":"How far below the eyes the board stands, in cm", "widget":"slider", "min":0, "max":100, "step":1}'
+    - '// @input bool unlockAllPacks {"hint":"Start with every building pack unlocked (skips the milestones; the WebXR ?unlock)"}'
+    - '// @input bool debugColliders {"hint":"Draw the grab / hover colliders"}'
+    - '// @input bool startWithChoice {"hint":"Debug: start at the first score milestone (new pack card, then the hand choice) instead of a random first hand"}'
+    - '// @input string firstHand {"hint":"Debug: deal this hand preset first (e.g. Skywatch_01); empty = a random hand, as in the WebXR version"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Sounds"}'
+    - '// @input Asset.AudioTrackAsset sfxBuild {"hint":"Placed a building / picked a hand"}'
+    - "// @input Asset.AudioTrackAsset sfxFail {\"hint\":\"Can't build here / game over\"}"
+    - '// @input Asset.AudioTrackAsset sfxCoin {"hint":"A score reached the budget"}'
+    - '// @input Asset.AudioTrackAsset sfxMilestone {"hint":"Score milestone"}'
+    - '// @input Asset.AudioTrackAsset sfxCloud {"hint":"A cloud was used up or formed again"}'
+    - '// @ui {"widget":"group_end"}'

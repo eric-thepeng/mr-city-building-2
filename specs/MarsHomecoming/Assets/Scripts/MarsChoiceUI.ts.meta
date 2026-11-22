@@ -1,0 +1,63 @@
+- !<AssetImportMetadata/533f3731-c818-4a52-99f4-16d2ddca4716>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 26c1cf1b-b0df-4dba-b52a-2cde2fd07266
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 26c1cf1b-b0df-4dba-b52a-2cde2fd07266
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 52b4776c-b375-4c77-a326-78462f681cda
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/52b4776c-b375-4c77-a326-78462f681cda>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  RunInEditor: false
+  ComponentUid: deb79604-ce8f-4b77-9420-7e9f0ec97377
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    handCardWidth: false
+    lineHeight: false
+    modelHeight: false
+    packCardWidth: false
+    spinSpeed: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - lineHeight: 1.100000
+      handCardWidth: !<float> 15.000000
+      packCardWidth: !<float> 27.000000
+      modelHeight: 3.500000
+      spinSpeed: 0.800000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"<span style=\"color: #60A5FA;\">MarsChoiceUI – pick the next hand / new pack card</span>"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float lineHeight = 0.75 {"hint":"Line height of the card text in cm", "widget":"slider", "min":0.6, "max":2, "step":0.05}'
+    - '// @input float handCardWidth = 10.5 {"hint":"Width of a hand card in cm", "widget":"slider", "min":10, "max":30, "step":0.5}'
+    - "// @input float packCardWidth = 19 {\"hint\":\"Width of the new pack's card in cm\", \"widget\":\"slider\", \"min\":14, \"max\":40, \"step\":0.5}"
+    - '// @input float modelHeight = 2.4 {"hint":"Height of the turning building models above each card in cm", "widget":"slider", "min":2, "max":8, "step":0.25}'
+    - '// @input float spinSpeed = 0.8 {"hint":"Turning speed of the models (radians per second)", "widget":"slider", "min":0, "max":3, "step":0.1}'
+    - '// @ui {"widget":"group_end"}'
