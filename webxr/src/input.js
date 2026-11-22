@@ -376,10 +376,13 @@ export class MouseInput {
         let top = -Infinity;
         b.root.updateMatrixWorld(true);
         const feet = b.beams.length ? b.beams.map((beam) => beam.holder) : [b.root];
+        const hitY = (ground.point.y - board.position.y) / k; // where the cursor ray landed, in board units
         for (const foot of feet) {
           foot.getWorldPosition(tmpV);
           board.worldToLocal(tmpV2.copy(tmpV));
           let h = hf.at(tmpV2.x, tmpV2.z);
+          // off the heightfield (e.g. the ray hit the board's side wall): use the hit point itself
+          if (!Number.isFinite(h)) h = hitY;
           this.probe.set(tmpV.setY(board.position.y + 100 * k), DOWN);
           const hit = this.probe.intersectObjects(solids, false)[0];
           const on = hit?.object.userData.building;
@@ -389,6 +392,7 @@ export class MouseInput {
         // board is only yawed and uniformly scaled, so heights convert directly
         const beamDrop = b.beams.length ? -b.beams[0].holder.position.y : 0;
         // +0.001: resting exactly on the ground can read as just below it (float precision)
+        if (!Number.isFinite(top)) top = hitY;
         b.root.position.y = top + beamDrop + 0.001 + this.lift;
         b.lift = this.lift;
       } else {

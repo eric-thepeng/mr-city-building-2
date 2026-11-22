@@ -142,6 +142,11 @@ class Progress {
     };
     this.notice = card('rgba(18,112,84,0.95)');
     game.addButton(this.notice.card.mesh, () => this.closeNotice());
+    this.continueBtn = new Label({ height: 0.013 * ui, bg: 'rgba(45,108,223,0.95)', font: 800, billboard: false });
+    this.continueBtn.mesh.raycast = THREE.Mesh.prototype.raycast;
+    this.continueBtn.visible = false;
+    anchor.add(this.continueBtn.mesh);
+    game.addButton(this.continueBtn.mesh, () => this.closeNotice());
     this.hands = [0, 1].map(() => {
       const o = card('rgba(28,70,160,0.95)');
       o.preset = null;
@@ -158,6 +163,8 @@ class Progress {
     this.level = 0;
     this.unlocked = new Set(this.unlockAll ? this.game.data.packs.map((p) => p.name) : []);
     this.fresh = []; // packs just unlocked: their card and first hand come with the next pick
+    this.freshPick = null; // the pack whose hand joins the choice after its card is closed
+    this.awaitingHands = false;
     this.messageUntil = 0;
     this.hideHands();
     this.closeNotice();
@@ -249,7 +256,7 @@ class Progress {
     }
     lines.push('#Hands');
     for (const p of pack.presets) lines.push(`  ${this.handLine(p)}`);
-    lines.push('(tap to close)');
+    lines.push('(tap to continue)');
     return lines.join('\n');
   }
 
@@ -292,6 +299,13 @@ class Progress {
     n.pack = null;
     n.card.visible = false;
     n.models.visible = false;
+    this.continueBtn.visible = false;
+    if (this.awaitingHands) {
+      // the new pack's card was its own step; now the hand choice
+      this.awaitingHands = false;
+      this.showHands();
+      return;
+    }
     this.layout();
   }
 
@@ -299,12 +313,24 @@ class Progress {
   /** The hand is used up: offer two hands (a just-unlocked pack's hand is always one of them). */
   offerHands() {
     if (this.game.over) return;
-    const picks = [];
-    const freshPack = this.fresh.shift();
-    if (freshPack) {
-      picks.push({ preset: freshPack.presets[0], pack: freshPack });
-      this.showNotice(freshPack);
+    this.freshPick = this.fresh.shift() ?? null;
+    if (this.freshPick) {
+      // a pack was unlocked: show its card on its own first, the hands after "Continue"
+      this.showNotice(this.freshPick);
+      this.continueBtn.set('Continue');
+      this.continueBtn.visible = true;
+      this.awaitingHands = true;
+      this.layout();
+      return;
     }
+    this.showHands();
+  }
+
+  showHands() {
+    const picks = [];
+    const freshPack = this.freshPick;
+    this.freshPick = null;
+    if (freshPack) picks.push({ preset: freshPack.presets[0], pack: freshPack });
     const pool = this.pool().filter((p) => !picks.some((q) => q.preset === p));
     while (picks.length < 2 && pool.length) picks.push({ preset: pool.splice(Math.floor(Math.random() * pool.length), 1)[0], pack: null });
     this.hands.forEach((o, i) => {
@@ -344,6 +370,7 @@ class Progress {
 
   /** The game is over (budget below 0): clear the choice and say so on the sign. */
   gameOver() {
+    this.awaitingHands = false;
     this.hideHands();
     this.closeNotice();
     this.refreshMessage();
@@ -362,6 +389,10 @@ class Progress {
     const total = items.reduce((a, o) => a + slot(o), 0) + gap * (items.length - 1);
     let x = -total / 2;
     let top = 0;
+    // the Continue button under the new pack's card
+    const btn = this.continueBtn;
+    const btnH = btn.wanted ? btn.mesh.scale.y + 0.008 * ui : 0;
+    if (btn.wanted) btn.mesh.position.set(0, -btnH / 2, 0);
     for (const o of items) {
       const w = slot(o);
       const h = o.card.mesh.scale.y;
@@ -370,13 +401,13 @@ class Progress {
       x += w + gap;
       top = Math.max(top, h);
     }
-    this.title.set(this.notice.pack ? `New pack: ${this.notice.pack.displayName} · pick your next hand` : 'Pick your next hand');
+    this.title.set(this.notice.pack ? `New pack unlocked: ${this.notice.pack.displayName}` : 'Pick your next hand');
     this.title.visible = true;
     const titleY = top + 0.06 * ui + this.title.mesh.scale.y / 2;
     this.title.mesh.position.set(0, titleY, 0);
     // the frame around everything
     const w = Math.max(total, this.title.mesh.scale.x) + pad * 2;
-    const y0 = -pad;
+    const y0 = -pad - btnH;
     const y1 = titleY + this.title.mesh.scale.y / 2 + pad;
     const border = 0.003 * ui;
     const cy = (y0 + y1) / 2;
@@ -731,6 +762,9 @@ export class Building {
 
   resetToWaiting() {
     this.state = State.WAITING;
+    // never animate back from a broken position (it would stay NaN and the building would vanish)
+    const p = this.root.position;
+    if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) p.copy(this.initialPosition);
     for (const beam of this.beams) this.adjustBeam(beam, 0);
     this.nameLabel.set(this.game.progress.name(this.key));
     this.game.cancelAllBadges();
