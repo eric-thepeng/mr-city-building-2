@@ -47,6 +47,10 @@
     .buttons { display: flex; gap: 8px; }
     .buttons button { padding: 9px 14px; border-radius: 10px; background: var(--blue); }
     .buttons button.secondary { background: #3a4156; }
+    .buttons button { transition: transform .1s, filter .1s; }
+    .buttons button:hover { filter: brightness(1.15); }
+    .buttons button:active, .cta:active { transform: scale(0.95); filter: brightness(0.88); }
+    canvas.carrying { cursor: none !important; }
     .over-tag { display: none; padding: 6px 10px; border-radius: 8px; background: #d63a3a; color: #fff; font-weight: 700; font-size: 13px; }
     body.over .over-tag { display: block; }
 

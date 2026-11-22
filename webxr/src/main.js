@@ -78,9 +78,9 @@ async function main() {
   // ---------------------------------------------------------------- sky
   // Only for VR / desktop. Specs is AR-only, so it gets neither sky nor fog: switching
   // fog off when AR starts would compile every shader a second time.
-  const sky = SPECS ? null : makeSky();
+  const sky = SPECS ? null : makeSky(sun.position.clone().normalize());
   if (sky) scene.add(sky);
-  const fog = SPECS ? null : new THREE.Fog(0xbfd8f0, 2.5, 6);
+  const fog = SPECS ? null : new THREE.Fog(0xe0a078, 2.5, 6);
   scene.fog = fog;
 
   // ---------------------------------------------------------------- world
@@ -111,6 +111,7 @@ async function main() {
     busy: () => !!mouse.dragging,
   });
   controls.autoRotate = true;
+  mouse.cameraBusy = () => !!controls.mode;
   const xrInput = new XRInput(renderer, rig, game, { models: !SPECS });
 
   // In-world buttons under the budget sign (inside XR there is no HTML UI).
@@ -121,7 +122,7 @@ async function main() {
     btn.mesh.position.set(x, -0.05 * game.ui, 0);
     btn.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
     game.money.anchor.add(btn.mesh);
-    xrInput.addButton(btn.mesh, onPress);
+    xrInput.addButton(btn, onPress);
   };
   addButton('New game', -0.07 * game.ui, () => game.restart());
   addButton('Recenter', 0.07 * game.ui, () => { needsPlacement = true; });
@@ -217,19 +218,9 @@ async function main() {
     else camera.setViewOffset(w, h, 0, h * (w > 600 ? 0.15 : 0.16), w, h);
     camera.updateProjectionMatrix();
   };
-  // The landing page shows the bare board under a Mars dusk; signs and the day sky come with play.
+  // The landing page shows the bare board; the signs come with play.
   function syncLanding() {
-    const landing = !playing && !mode;
-    Label.setHidden(landing);
-    if (!sky) return;
-    const u = sky.material.uniforms;
-    // the sky shader writes its colours as they are, so the dusk values are given as displayed
-    const space = landing ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
-    const [top, horizon, bottom] = landing ? [0x171b30, 0xb9694a, 0x14100f] : [0x4a8fd8, 0xcfe3f5, 0x8a7a6a];
-    u.top.value.setHex(top, space);
-    u.horizon.value.setHex(horizon, space);
-    u.bottom.value.setHex(bottom, space);
-    fog.color.setHex(landing ? 0xc9774d : 0xbfd8f0);
+    Label.setHidden(!playing && !mode);
   }
   const setPlaying = (on) => {
     playing = on;
@@ -334,21 +325,49 @@ async function main() {
   });
 }
 
-function makeSky() {
+/**
+ * A Mars evening, drawn in one cheap shader (no textures): a peach horizon under a deep indigo
+ * sky, a glow around the sun, two ranges of distant mesas and a dark plain below.
+ */
+function makeSky(sunDir) {
   const geo = new THREE.SphereGeometry(80, 32, 16);
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     fog: false,
-    uniforms: {
-      top: { value: new THREE.Color(0x4a8fd8) },
-      horizon: { value: new THREE.Color(0xcfe3f5) },
-      bottom: { value: new THREE.Color(0x8a7a6a) },
-    },
-    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 bottom; varying vec3 vP;
-      void main(){ float h = vP.y; vec3 c = h > 0.0 ? mix(horizon, top, pow(h, 0.6)) : mix(horizon, bottom, pow(-h, 0.5));
-      gl_FragColor = vec4(c, 1.0); }`,
+    uniforms: { sunDir: { value: sunDir } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `precision mediump float;
+      uniform vec3 sunDir; varying vec3 vP;
+      const vec3 ZENITH = vec3(0.125, 0.145, 0.300);
+      const vec3 MID = vec3(0.520, 0.350, 0.390);
+      const vec3 HORIZON = vec3(0.930, 0.640, 0.450);
+      const vec3 FAR_RIDGE = vec3(0.680, 0.420, 0.330);
+      const vec3 NEAR_RIDGE = vec3(0.420, 0.245, 0.200);
+      const vec3 PLAIN = vec3(0.285, 0.170, 0.140);
+      float below(float y, float edge) { return 1.0 - smoothstep(edge - 0.0015, edge + 0.0015, y); }
+      void main(){
+        vec3 d = normalize(vP);
+        float up = max(d.y, 0.0);
+        vec3 c = mix(HORIZON, MID, smoothstep(0.0, 0.22, up));
+        c = mix(c, ZENITH, smoothstep(0.12, 0.80, up));
+        float s = max(dot(d, sunDir), 0.0);
+        c += vec3(1.0, 0.72, 0.50) * (0.26 * pow(s, 12.0) + 0.50 * pow(s, 120.0));
+        c = mix(c, vec3(1.0, 0.95, 0.86), smoothstep(0.9994, 0.9997, s));
+        float a = atan(d.z, d.x);
+        float far = 0.050 + 0.022 * sin(a * 3.0 + 1.0) + 0.012 * sin(a * 7.0 + 2.4) + 0.006 * sin(a * 17.0 + 0.6);
+        float near = 0.022 + 0.014 * sin(a * 5.0 + 4.0) + 0.007 * sin(a * 11.0 + 1.7) + 0.003 * sin(a * 29.0);
+        c = mix(c, FAR_RIDGE, below(d.y, far));
+        c = mix(c, NEAR_RIDGE, below(d.y, near));
+        if (d.y < 0.0) {
+          // the plain, with soft dunes that fade out towards the horizon
+          vec2 g = d.xz / max(-d.y, 0.06);
+          float dune = sin(g.x * 2.1 + 1.6 * sin(g.y * 1.3)) * sin(g.y * 1.7 + 1.2 * sin(g.x * 0.9));
+          c = mix(NEAR_RIDGE, PLAIN, smoothstep(0.0, 0.40, -d.y));
+          c *= 1.0 + 0.14 * dune * smoothstep(0.03, 0.18, -d.y);
+        }
+        gl_FragColor = vec4(c, 1.0);
+      }`,
   });
   const sky = new THREE.Mesh(geo, mat);
   sky.raycast = () => {};

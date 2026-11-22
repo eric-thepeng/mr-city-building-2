@@ -53,6 +53,7 @@ class Pointer {
     this.cursor.raycast = () => {};
     this.inputSource = null;
     this.grabbed = null;
+    this.pressing = null; // the in-world button held down (it fires on release)
     this.grabMode = null; // 'ray' | 'pinch'
     this.hovered = null;
     this.pinching = false;
@@ -110,13 +111,16 @@ export class XRInput {
         s.line.visible = e.data.targetRayMode === 'tracked-pointer';
       });
       s.controller.addEventListener('disconnected', () => {
+        if (s.pressing) s.pressing.down = false;
+        s.pressing = null;
+        this.game.hoverButton(s, null);
         this.release(s);
         s.inputSource = null;
         s.pinching = false;
       });
       // Controllers, and hands without joint data, use the runtime's select / squeeze events.
       const start = () => { if (!s.hasJoints) this.press(s, 'ray'); };
-      const end = () => { if (!s.hasJoints || s.grabMode === 'ray') this.release(s); };
+      const end = () => { if (!s.hasJoints || s.grabMode === 'ray' || (s.pressing && !s.pinching)) this.release(s); };
       s.controller.addEventListener('selectstart', start);
       s.controller.addEventListener('selectend', end);
       s.controller.addEventListener('squeezestart', start);
@@ -196,11 +200,12 @@ export class XRInput {
 
   /** Start a grab or press a button. `how` is 'ray' for select events and 'pinch' for joint pinches. */
   press(s, how) {
-    if (s.grabbed) return;
+    if (s.grabbed || s.pressing) return;
     const pick = this._pick(s);
     if (!pick) return;
     if (pick.button) {
-      pick.button.onPress();
+      s.pressing = pick.button;
+      pick.button.down = true;
       this._pulse(s, 0.5, 40);
       return;
     }
@@ -222,6 +227,14 @@ export class XRInput {
   }
 
   release(s) {
+    const btn = s.pressing;
+    if (btn) {
+      s.pressing = null;
+      btn.down = false;
+      if (btn.mesh.visible) btn.onPress();
+      this._pulse(s, 0.6, 30);
+      return;
+    }
     const b = s.grabbed;
     if (!b) return;
     s.grabbed = null;
@@ -278,6 +291,7 @@ export class XRInput {
         hovered?.onHoverStart();
         s.hovered = hovered;
       }
+      this.game.hoverButton(s, pick?.button ?? null);
       s.line.scale.z = pick && pick.distance > 0 ? pick.distance : 2;
       // a small ring where the ray lands, which helps on see-through displays
       if (pick?.point) {
@@ -305,17 +319,20 @@ export class MouseInput {
     this.hovered = null;
     this.lift = 0; // game units above the snapped ground position
     this.probe = new THREE.Raycaster();
-    this.last = null; // last pointer position, to keep a dragged building under it while the camera flies
+    this.last = null; // where the building is carried on screen, kept while the camera flies
+    this.offset = new THREE.Vector2(); // how far the real cursor drifted from it during a camera turn
+    this.pressing = null; // the in-world button held down (it fires on release over the same button)
+    this.cameraBusy = null; // set by main.js: true while the right / middle button moves the camera
     this.enabled = true;
     dom.addEventListener('pointerdown', (e) => this.down(e), { capture: true });
-    dom.addEventListener('pointermove', (e) => this.move(e));
-    window.addEventListener('pointerup', (e) => { if (e.button === 0) this.up(); });
+    dom.addEventListener('pointermove', (e) => this.onPointer(e));
+    window.addEventListener('pointerup', (e) => { if (!(e.buttons & 1)) this.up(e); });
     dom.addEventListener('wheel', (e) => {
       if (!this.dragging) return;
       e.preventDefault();
       const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
       this.lift = Math.max(0, this.lift - dy * 0.0002); // one notch = 0.02 game units (1 cm on the board)
-      this.move(e);
+      this.move(this.last);
     }, { passive: false });
     window.addEventListener('keydown', (e) => {
       if (!this.dragging) return;
@@ -335,11 +352,11 @@ export class MouseInput {
   down(e) {
     if (!this.enabled || e.button !== 0) return;
     this._ray(e);
-    // in-world buttons (e.g. picking a pack at a milestone)
-    const shown = this.game.buttons.filter((b) => b.mesh.visible);
-    const press = this.raycaster.intersectObjects(shown.map((b) => b.mesh), false)[0];
-    if (press) {
-      shown.find((b) => b.mesh === press.object).onPress();
+    // in-world buttons (the hand choice, Continue, New game...) fire when released
+    const btn = this._buttonAt();
+    if (btn) {
+      this.pressing = btn;
+      btn.down = true;
       e.stopImmediatePropagation();
       return;
     }
@@ -352,12 +369,38 @@ export class MouseInput {
     this.dragging = b;
     this.lift = 0; // snap to the ground
     b.lift = 0;
+    this.last = { clientX: e.clientX, clientY: e.clientY };
+    this.offset.set(0, 0);
     e.stopImmediatePropagation();
+  }
+
+  _buttonAt() {
+    const hit = this.raycaster.intersectObjects(this.game.buttonTargets(), false)[0];
+    return hit ? this.game.buttons.find((b) => b.mesh === hit.object) ?? null : null;
+  }
+
+  /** The pointer moved. While the camera turns or pans, a carried building holds its spot on screen. */
+  onPointer(e) {
+    if (!this.enabled) return;
+    // the left button came up while another one is still down: that is only a pointermove
+    if ((this.dragging || this.pressing) && !(e.buttons & 1)) this.up(e);
+    if (this.dragging && this.cameraBusy?.()) {
+      this.offset.set(this.last.clientX - e.clientX, this.last.clientY - e.clientY);
+      this.dom.classList.add('carrying'); // the real cursor is elsewhere now, so hide it
+    } else if (this.dragging) {
+      const r = this.dom.getBoundingClientRect();
+      this.last = {
+        clientX: THREE.MathUtils.clamp(e.clientX + this.offset.x, r.left, r.right),
+        clientY: THREE.MathUtils.clamp(e.clientY + this.offset.y, r.top, r.bottom),
+      };
+    } else {
+      this.last = { clientX: e.clientX, clientY: e.clientY };
+    }
+    this.move(this.last);
   }
 
   move(e) {
     if (!this.enabled) return;
-    this.last = { clientX: e.clientX, clientY: e.clientY };
     this._ray(e);
     const b = this.dragging;
     if (b) {
@@ -405,14 +448,17 @@ export class MouseInput {
       }
       return;
     }
-    const hit = this.raycaster.intersectObjects(this.game.hoverables(), false)[0];
+    if (this.cameraBusy?.()) return;
+    const btn = this._buttonAt();
+    this.game.hoverButton(this, btn);
+    const hit = btn ? null : this.raycaster.intersectObjects(this.game.hoverables(), false)[0];
     const hovered = hit ? hit.object.userData.building : null;
     if (hovered !== this.hovered) {
       this.hovered?.onHoverEnd();
       hovered?.onHoverStart();
       this.hovered = hovered;
-      this.dom.style.cursor = hovered && !hovered.isResource ? 'grab' : '';
     }
+    this.dom.style.cursor = btn ? 'pointer' : hovered?.grabbable ? 'grab' : '';
   }
 
   /** Called every frame: keeps a dragged building under the cursor while the camera moves. */
@@ -420,10 +466,22 @@ export class MouseInput {
     if (this.dragging && this.last) this.move(this.last);
   }
 
-  up() {
+  up(e) {
+    const btn = this.pressing;
+    if (btn) {
+      this.pressing = null;
+      btn.down = false;
+      if (e) {
+        this._ray(e);
+        if (this._buttonAt() === btn) btn.onPress();
+      }
+      return;
+    }
     const b = this.dragging;
     if (!b) return;
     this.dragging = null;
+    this.offset.set(0, 0);
+    this.dom.classList.remove('carrying');
     b.lift = 0;
     b.onRelease();
   }

@@ -52,6 +52,9 @@ export class Label {
     this.mesh.visible = false;
     this.wanted = true;
     this.text = null;
+    this.w = 0; // world size of the drawn label, before any hover / press scaling
+    this.h = 0;
+    this.popScale = 1;
     Label.all.add(this);
   }
 
@@ -132,9 +135,17 @@ export class Label {
     this.texture.repeat.set(w / cw, h / ch);
     this.texture.offset.set(0, 1 - h / ch);
     const worldH = this.height * (h / lineH);
-    this.mesh.scale.set(worldH * (w / h), worldH, 1);
+    this.w = worldH * (w / h);
+    this.h = worldH;
+    this.mesh.scale.set(this.w * this.popScale, this.h * this.popScale, 1);
     this.mesh.visible = this.wanted && !Label.hidden;
     return this;
+  }
+
+  /** Hover / press feedback on a button: scales the label without changing its layout size. */
+  setPop(k) {
+    this.popScale = k;
+    this.mesh.scale.set(this.w * k, this.h * k, 1);
   }
 
   /** Shows the label once it has text; until then it stays hidden. */
