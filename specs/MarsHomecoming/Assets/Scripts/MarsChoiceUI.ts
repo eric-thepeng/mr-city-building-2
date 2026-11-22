@@ -40,6 +40,12 @@ export type ModelMaker = (key: string, parent: SceneObject) => {object: SceneObj
 
 const WHITE = new vec4(1, 1, 1, 1)
 const GOLD = new vec4(1, 0.77, 0, 1)
+/** Frame border around the content, in cm (UI Kit's default of 4 is a lot of empty panel here). */
+const PANEL_MARGIN = 1.2
+/** Frames a replaced card row stays (hidden) before it is destroyed. */
+const RETIRE_FRAMES = 10
+/** Seconds after new cards appear before a press on them counts. */
+const ARM_DELAY = 0.35
 const GREEN = new vec4(0.07, 0.44, 0.33, 0.95)
 
 @component
@@ -79,6 +85,8 @@ export class MarsChoiceUI extends BaseScriptComponent {
   private content: SceneObject
   private column: SceneObject | null = null
   private spinners: Transform[] = []
+  private retired: {object: SceneObject; frames: number}[] = []
+  private armedAt = 0
   private size = new vec2(30, 20)
   private ready = false
   private makeModel: ModelMaker | null = null
@@ -89,9 +97,11 @@ export class MarsChoiceUI extends BaseScriptComponent {
     this.content = contentHost(host)
     this.frame.onInitialized.add(() => {
       this.ready = true
+      this.frame.margin = PANEL_MARGIN
       this.frame.innerSize = this.size
     })
     this.createEvent("UpdateEvent").bind(() => {
+      this.sweepRetired()
       if (!host.enabled || !this.spinners.length) return
       const q = quat.angleAxis(getDeltaTime() * this.spinSpeed, vec3.up())
       for (const t of this.spinners) t.setLocalRotation(q.multiply(t.getLocalRotation()))
@@ -99,9 +109,31 @@ export class MarsChoiceUI extends BaseScriptComponent {
     host.enabled = false
   }
 
+  /**
+   * Runs `action` on release, but only for a press that began after this content appeared. New
+   * cards open right under the hand that pressed the last button, and must not catch that press.
+   */
+  private onFreshPress(button: Button, action: () => void): void {
+    let fresh = false
+    button.onTriggerDown.add(() => (fresh = getTime() >= this.armedAt))
+    button.onTriggerUp.add(() => {
+      if (fresh) action()
+      fresh = false
+    })
+  }
+
+  private sweepRetired(): void {
+    for (let i = this.retired.length - 1; i >= 0; i--) {
+      const r = this.retired[i]
+      if (--r.frames > 0) continue
+      if (!isNull(r.object)) r.object.destroy()
+      this.retired.splice(i, 1)
+    }
+  }
+
   /** Outer size of the panel in cm (inner size plus the frame's margin). */
   get panelSize(): vec2 {
-    return new vec2(this.size.x + 8, this.size.y + 8)
+    return new vec2(this.size.x + PANEL_MARGIN * 2, this.size.y + PANEL_MARGIN * 2)
   }
 
   setModelMaker(fn: ModelMaker): void {
@@ -113,8 +145,15 @@ export class MarsChoiceUI extends BaseScriptComponent {
   }
 
   show(state: ChoiceView): void {
-    if (this.column) this.column.destroy()
+    // show() can run inside a card's own trigger event: hide the old row now and destroy it a
+    // few frames later, once Interaction Kit has let go of its buttons.
+    if (this.column) {
+      this.column.enabled = false
+      this.retired.push({object: this.column, frames: RETIRE_FRAMES})
+      this.column = null
+    }
     this.spinners = []
+    this.armedAt = getTime() + ARM_DELAY
     const lh = this.lineHeight
     const gap = 0.8
     const modelsH = this.modelHeight + 1
@@ -143,7 +182,8 @@ export class MarsChoiceUI extends BaseScriptComponent {
       flexChild(row, {w: s.w, h: rowH}, (cell) => this.buildCard(cell, card, pick, s.w, s.h, rowH))
     })
     if (state.showContinue) {
-      addButton(col, "Continue", 9, 2.4, () => this.onContinue.invoke(), {variant: {shape: "Capsule", style: "Primary"}})
+      const {button} = addButton(col, "Continue", 9, 2.4, () => {}, {variant: {shape: "Capsule", style: "Primary"}})
+      this.onFreshPress(button, () => this.onContinue.invoke())
     }
     this.size = new vec2(w + 2, h + 2)
     if (this.ready) this.frame.innerSize = this.size
@@ -158,10 +198,10 @@ export class MarsChoiceUI extends BaseScriptComponent {
       makeCardRect(plate, w, h, {color: GREEN, cornerRadius: 0.8})
     } else {
       const btn = plate.createComponent(Button.getTypeName()) as Button
-      btn.setVariant({theme: "System3", shape: "Rectangle", style: card.isNew ? "Primary" : "Secondary"})
+      btn.setVariant({theme: "System3", shape: "Rectangle", style: "Primary"})
       btn.size = new vec3(w, h, 1)
       btn.onInitialized.add(() => (btn.size = new vec3(w, h, 1)))
-      btn.onTriggerUp.add(() => this.onPickHand.invoke(pick))
+      this.onFreshPress(btn, () => this.onPickHand.invoke(pick))
     }
     const textObj = obj(plate, "CardText", new vec3(0, 0, 0.6))
     const t = textObj.createComponent("Component.Text") as Text

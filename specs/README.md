@@ -38,6 +38,7 @@ inside the board are in the same game units (Unity metres); the `Board` object i
 | `main.js`: setup, board placement, Recenter / New game, frame loop, sign faces the player | `MarsMain.ts` (the `@component` on the `MarsHomecoming` object) |
 | `expansion.js` (`mergeExpansion`) + `assets.js` `Heightfield` | `MarsData.ts` (reads the same three JSON files as JsonAssets) |
 | `assets.js` `AssetLibrary` (models from `world.glb`, materials) | `MarsModels.ts` `ModelLibrary` + `Assets/Materials/MH_*.mat` |
+| `assets.js` terrain `flatShading` + `addRockStrata` | `MarsTerrain.ts` (face normals) + `Assets/Textures/terrain_strata.png` (from `tools/gen-strata.py`) |
 | `Building` (states, beams, cost, overlap, scoring, badges, pop) | `MarsBuilding.ts` |
 | `Game`, `MoneyManager`, `HandManager`, clouds, dust ring, flying scores | `MarsGame.ts` |
 | `Progress` (score, milestones, packs, card text, choice flow) | `MarsProgress.ts` |
@@ -49,9 +50,20 @@ inside the board are in the same game units (Unity metres); the `Board` object i
 | Budget sign labels + in-world buttons | `MarsSignUI.ts` (UI Kit `Frame`, `Button`s) |
 | Choice panel (cards, pack card, Continue) | `MarsChoiceUI.ts` (UI Kit `Frame`, card `Button`s, `RoundedRectangle`, Flex layout) |
 | `makeAudio` (WebAudio tones) | `Assets/GeneratedSFX/Mars*.wav`, made by `tools/gen-sfx.js` with the same notes |
-| `data/game-data.json`, `expansion.json`, `board.json`, `world.glb`, `textures/` | `Assets/Data`, `Assets/Models`, `Assets/Textures` (copied by `tools/sync-data.ps1`) |
+| `data/game-data.json`, `expansion.json`, `board.json`, `world.glb`, `textures/` | `Assets/Data`, `Assets/Models`, `Assets/Textures` (copied by `tools/sync-data.ps1`; the two atlases are stored flipped, see below) |
 
 `UIKitHelpers.ts` is CLAD's UI Kit 4.0 helper, copied unchanged.
+
+### What is the same art, and what was rebuilt
+
+| | Source |
+|---|---|
+| All 12 buildings, 26 ore rocks, 9 crystal veins, 6 ice clouds, terrain and side walls | **The same meshes**: `webxr/data/world.glb`, unchanged |
+| Building textures | **The same two atlases**, flipped vertically: WebXR samples them with `flipY = true`, which Lens has no switch for (its material UV transform did not apply in the Specs Preview) |
+| Materials | **Rebuilt** as glTF materials with the WebXR colours and 45% texture glow |
+| Terrain faces and cliff rock bands | **Rebuilt** at start from the same mesh: per-face normals, bands from a lookup texture with the WebXR colours and spacing |
+| Support beams, range sphere, dust ring, gas puffs | **Rebuilt** with MeshBuilder at the WebXR sizes |
+| Labels, sign, choice panel | **Rebuilt** with Lens Text and UI Kit |
 
 ### Scene
 
@@ -93,8 +105,6 @@ see-through on Specs).
 
 ## Differences from the WebXR version
 
-- **Rock bands on the cliff faces** (`addRockStrata`, a three.js shader patch) are not ported yet:
-  cliffs show the plain terrain colours. This needs a custom material in Lens Studio's shader graph.
 - **Beams on resource nodes** stand on the node's bounding box instead of its exact rock surface.
 - **Mouse in Preview** drags in SIK's camera plane; there is no wheel lift or Z/X rotation. On Specs,
   carrying is yaw-only through SIK, as in WebXR.
@@ -109,6 +119,7 @@ carrying and placing buildings, cost and beam labels, badges, scoring and flying
 budget, "beams too long", the hand choice and dealing, the milestone pack card and Continue, the
 Sky Platform (`standOn`) with a Wind Turbine on top (cloud + height score), the Weather Station
 using up an ice cloud (ghost with countdown), resource tooltips, New game and Recenter.
+All 12 buildings were also compared side by side with the live WebXR version.
 
 Not yet checked: game over (budget below 0) in Preview, and anything on Specs glasses. The first
 on-device run is the next step (Lens Studio → *Preview Lens* on a paired Specs).
@@ -140,6 +151,12 @@ root loads neither CLAD nor the MCP server.
 
 The first time CLAD drives simulated hands in Preview, Lens Studio asks to trust the **LEAF** plugin
 (filesystem, asset library, push to device); the TypeScript compile waits until it is answered.
+
+To regenerate the rock-band lookup texture:
+
+```powershell
+python specs/tools/gen-strata.py
+```
 
 To regenerate the sound effects (CLAD's offline synth):
 

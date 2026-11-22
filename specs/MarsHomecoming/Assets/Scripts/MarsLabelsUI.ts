@@ -64,7 +64,7 @@ export class WorldLabel {
     const bgs = this.text.backgroundSettings
     bgs.enabled = true
     bgs.cornerRadius = 0.25
-    const m = Rect.create(-0.35, 0.35, -0.2, 0.2)
+    const m = Rect.create(0.35, 0.35, 0.2, 0.2) // how far the background extends past the text on each side
     bgs.margins = m
     this.billboard = style.billboard !== false
     if (this.billboard) WorldLabel.billboards.push(this)
@@ -119,14 +119,11 @@ export class WorldLabel {
     if (!isNull(this.object)) this.object.destroy()
   }
 
-  /** Turns every visible billboard label to face the camera (called once per frame). */
-  static faceCamera(camPos: vec3): void {
+  /** Gives every visible billboard label the camera's rotation, so text stays level (as in WebXR). */
+  static faceCamera(camRot: quat): void {
     for (const l of WorldLabel.billboards) {
       if (!l.object.enabled || !l.object.isEnabledInHierarchy) continue
-      const t = l.object.getTransform()
-      const dir = camPos.sub(t.getWorldPosition())
-      if (dir.lengthSquared < 1e-6) continue
-      t.setWorldRotation(quat.lookAt(dir.normalize(), vec3.up()))
+      l.object.getTransform().setWorldRotation(camRot)
     }
   }
 }

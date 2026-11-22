@@ -57,15 +57,16 @@ export class MarsSignUI extends BaseScriptComponent {
     const bg = this.message.backgroundSettings
     bg.enabled = false
     bg.cornerRadius = 0.3
-    bg.margins = Rect.create(-0.6, 0.6, -0.25, 0.25)
+    bg.margins = Rect.create(0.6, 0.6, 0.25, 0.25)
     this.score = dynamicText(col, "Score: 0", "Headline1", w, 2.2, SKY)
     this.until = dynamicText(col, "", "Caption", w, 1.4, PALE)
     this.budget = dynamicText(col, "Budget: 100", "Title2", w, 3.2, GOLD)
     const bs = this.buttonSize
     const row = flexRow(col, w, bs.y, {gap: 3, justify: FlexJustify.Center, align: FlexAlign.Center})
-    addButton(row, "New game", bs.x, bs.y, () => this.onNewGame.invoke(), {variant: {shape: "Capsule", style: "Primary"}})
+    addButton(row, "New game", bs.x, bs.y, () => this.onNewGame.invoke(), {variant: {shape: "Capsule", style: "Secondary"}})
     addButton(row, "Recenter", bs.x, bs.y, () => this.onRecenter.invoke(), {variant: {shape: "Capsule", style: "Secondary"}})
     this.frame.onInitialized.add(() => {
+      this.frame.margin = 1.2
       this.frame.innerSize = new vec2(w + 2, 16)
     })
   }

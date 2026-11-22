@@ -12,13 +12,24 @@ $copies = @(
   @{ From = 'game-data.json'; To = 'Data' },
   @{ From = 'expansion.json'; To = 'Data' },
   @{ From = 'board.json'; To = 'Data' },
-  @{ From = 'world.glb'; To = 'Models' },
-  @{ From = 'textures\spacebits_texture.png'; To = 'Textures' },
-  @{ From = 'textures\spacebits_texture_1.png'; To = 'Textures' }
+  @{ From = 'world.glb'; To = 'Models' }
 )
 foreach ($c in $copies) {
   $dest = Join-Path $assets $c.To
   New-Item -ItemType Directory -Force $dest | Out-Null
   Copy-Item (Join-Path $src $c.From) $dest -Force
   Write-Host "copied $($c.From) -> Assets/$($c.To)"
+}
+
+# The baked UVs keep three.js (FBX) orientation, which WebXR handles with texture.flipY = true.
+# Lens Studio has no such flag, so the atlases are stored upside down in the Lens project.
+Add-Type -AssemblyName System.Drawing
+$dest = Join-Path $assets 'Textures'
+New-Item -ItemType Directory -Force $dest | Out-Null
+foreach ($name in 'spacebits_texture.png', 'spacebits_texture_1.png') {
+  $img = [System.Drawing.Image]::FromFile((Join-Path $src "textures\$name"))
+  $img.RotateFlip([System.Drawing.RotateFlipType]::RotateNoneFlipY)
+  $img.Save((Join-Path $dest $name), [System.Drawing.Imaging.ImageFormat]::Png)
+  $img.Dispose()
+  Write-Host "copied textures\$name (flipped) -> Assets/Textures"
 }

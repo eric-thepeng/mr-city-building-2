@@ -91,6 +91,7 @@
     - NODE_8_DROPLIST_ITEM 0
     - ENABLE_GLTF_LIGHTING
     - ENABLE_VERTEX_COLOR_BASE
+    - ENABLE_BASE_TEX
   BlendMode: Disabled
   Properties:
     Port_Albedo_N405:
@@ -116,7 +117,19 @@
       value: 0
     baseColorFactor:
       typeIdx: 5
-      value: {x: 0.560000, y: 0.570000, z: 0.630000, w: 1.000000}
+      value: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+    baseColorTexture:
+      typeIdx: 9
+      value:
+        id: 59197375-baa0-441c-967a-d6b019de26f1
+        sampler:
+          filteringMode: Trilinear
+          wrapModeU: Repeat
+          wrapModeV: Repeat
+          wrapModeW: Repeat
+          borderColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+          mipmaps: false
+        type: Texture2D
     emissiveFactor:
       typeIdx: 4
       value: {x: 0.000000, y: 0.000000, z: 0.000000}

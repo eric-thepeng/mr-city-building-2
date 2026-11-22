@@ -184,7 +184,7 @@ export class MarsMain extends BaseScriptComponent implements GameView {
       const dc = cam.sub(ct.getWorldPosition())
       if (dc.lengthSquared > 1e-6) ct.setWorldRotation(quat.lookAt(dc.normalize(), vec3.up()))
     }
-    WorldLabel.faceCamera(cam)
+    WorldLabel.faceCamera(this.camT.getWorldRotation())
   }
 
   /** The sandbox in front of the player: ahead, below eye level, turned to face them. */

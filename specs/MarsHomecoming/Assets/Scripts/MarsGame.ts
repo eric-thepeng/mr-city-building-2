@@ -10,6 +10,7 @@ import {Building, CM_PER_UNIT, State} from "./MarsBuilding"
 import {GameData, HandPreset, Heightfield, displayName} from "./MarsData"
 import {ModelLibrary} from "./MarsModels"
 import {GasPuffs} from "./MarsMeshes"
+import {buildTerrainMesh} from "./MarsTerrain"
 import {ChoiceState, Progress} from "./MarsProgress"
 import {WorldLabel, rgba} from "./MarsLabelsUI"
 
@@ -181,7 +182,11 @@ export class Game {
     this.hand = new HandManager(this)
 
     // terrain
-    models.instance("terrain", board)
+    const terrain = models.instance("terrain", board)
+    models.forEachVisual(terrain, (v) => {
+      // flat-shaded faces and rock bands on the walls, as in WebXR
+      if (v.mainMaterial === models.mats.regular.Terrain) v.mesh = buildTerrainMesh(v.mesh)
+    })
     // resource nodes, crystal veins and ice clouds
     for (const res of data.board.resources) this.addBuilding(new Building(this, res.type, {resource: res}))
     models.mergeStatic(
