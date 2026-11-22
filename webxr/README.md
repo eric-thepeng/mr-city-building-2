@@ -64,12 +64,14 @@ are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by 
 
 ### Hands, milestones and packs
 
-The first hand of a game is random. When a hand is used up, the sign above the budget shows **two hand
-cards** (the buildings turning on top, and what is in the hand); pinch, point at or click one to deal it.
+The first hand of a game is random. When a hand is used up, a framed **choice panel** stands in the hand
+row in front of the player with **two hand cards** (the buildings turning on top, and what is in the hand);
+pinch, point at or click one to deal it. The budget sign shows the score and how many points are left until
+the next unlock. A building can't be placed where its box cuts into a finished building ("too close to …").
 
 **Score** counts every point placements earned or lost; it is separate from the budget. At score
-milestones (20, 50, 90, 140, 200, then every 80) a **random** locked building pack joins the deck, and a
-green card shows what it adds: what each new building scores, the bonuses it gives existing buildings,
+milestones (20, 50, 90, 140, 200, then every 80) a **random** locked building pack joins the deck (the budget sign
+says so), and at the next pick a green card in the choice panel shows what it adds: what each new building scores, the bonuses it gives existing buildings,
 and the pack's hands (text generated from the data in `Progress.describe`; tap the card to close it). The
 new pack's first hand is one of the two choices at the next pick. Once all three packs (Highlander,
 Skywatch, Cliffside) are in, a milestone pays +30 budget instead. Add **`?unlock`** to the address to

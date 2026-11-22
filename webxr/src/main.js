@@ -93,9 +93,9 @@ async function main() {
   game.placeBoard(DESK_BOARD, 0);
   game.audio = makeAudio();
   game.events.addEventListener('money', (e) => { $('budget').textContent = e.amount; });
-  game.events.addEventListener('hand', (e) => { $('hand').textContent = e.preset.name.replace('_', ' '); });
-  game.events.addEventListener('over', () => { $('hand').textContent = 'Game over'; });
-  game.events.addEventListener('score', (e) => { $('score').textContent = `${e.score} / ${e.next}`; });
+  game.events.addEventListener('hand', () => document.body.classList.remove('over'));
+  game.events.addEventListener('over', () => document.body.classList.add('over'));
+  game.events.addEventListener('score', (e) => { $('score').textContent = e.score; });
   // ?unlock: every building pack from the start (skips the milestones, for trying things out)
   game.progress.unlockAll = params.has('unlock');
   game.progress.reset();
@@ -226,6 +226,14 @@ async function main() {
   $('play-desktop').addEventListener('click', () => setPlaying(true));
   $('back').addEventListener('click', () => setPlaying(false));
   $('restart').addEventListener('click', () => game.restart());
+  // the controls card can be hidden; remember that for this browser
+  const setHelp = (hidden) => {
+    document.body.classList.toggle('help-hidden', hidden);
+    try { localStorage.setItem('help-hidden', hidden ? '1' : ''); } catch { /* storage may be blocked */ }
+  };
+  try { setHelp(localStorage.getItem('help-hidden') === '1'); } catch { /* ignore */ }
+  $('hide-help').addEventListener('click', () => setHelp(true));
+  $('show-help').addEventListener('click', () => setHelp(false));
   document.body.classList.add('loaded');
   window.__game = game; // handy for debugging in the console
   window.__xrInput = xrInput;
@@ -291,6 +299,10 @@ async function main() {
     viewer.getWorldPosition(look);
     look.y = panel.getWorldPosition(panelPos).y;
     panel.lookAt(look);
+    // the choice panel in the hand row faces the player fully (tilted back), so the
+    // buildings standing on its cards stay above the text instead of in front of it
+    const choice = game.progress.anchor;
+    if (choice.visible) choice.lookAt(viewer.getWorldPosition(look));
     renderer.render(scene, camera);
     // the XR camera pose is valid after the first rendered frames
     if (mode && needsPlacement && ++xrFrames > 2) {

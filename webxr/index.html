@@ -39,25 +39,46 @@
     body:not(.loaded) .desktop { visibility: hidden; }
 
     /* ---------- desktop play HUD */
-    #hud { position: fixed; top: 16px; left: 16px; right: 16px; display: none; gap: 12px; flex-wrap: wrap;
-      align-items: flex-start; pointer-events: none; }
-    .card { background: var(--panel); border-radius: 12px; padding: 12px 14px; pointer-events: auto; }
-    .stat { font-size: 13px; color: var(--muted); }
-    .stat b { display: block; font-size: 22px; color: var(--accent); }
-    #hand { text-transform: capitalize; }
-    .buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-    .buttons button { padding: 10px 14px; border-radius: 10px; background: var(--blue); }
+    #hud { position: fixed; top: 16px; left: 16px; display: none; pointer-events: none; }
+    .card { background: var(--panel); border-radius: 12px; pointer-events: auto; }
+    .topbar { display: flex; align-items: center; gap: 18px; padding: 10px 12px 10px 16px; }
+    .stat { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat b { display: block; font-size: 24px; line-height: 1.1; color: var(--accent); letter-spacing: 0; }
+    #score { color: #9fe0ff; }
+    .buttons { display: flex; gap: 8px; }
+    .buttons button { padding: 9px 14px; border-radius: 10px; background: var(--blue); }
     .buttons button.secondary { background: #3a4156; }
-    #help { max-width: 360px; font-size: 13px; line-height: 1.45; color: var(--muted); }
-    #help b { color: var(--fg); }
+    .over-tag { display: none; padding: 6px 10px; border-radius: 8px; background: #d63a3a; color: #fff; font-weight: 700; font-size: 13px; }
+    body.over .over-tag { display: block; }
+
+    /* controls: a small visual cheat sheet, bottom left */
+    #controls { position: fixed; left: 16px; bottom: 16px; display: none; padding: 12px 14px; width: 250px;
+      font-size: 13px; color: var(--muted); }
+    #controls .goal { color: var(--fg); line-height: 1.4; margin-bottom: 10px; }
+    #controls .goal b { color: var(--accent); }
+    #controls h3 { margin: 10px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    #controls ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+    #controls li { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; color: var(--fg); }
+    #controls .keys { display: flex; gap: 3px; align-items: center; }
+    .k { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 22px; padding: 0 5px;
+      border-radius: 5px; background: #2b3245; border: 1px solid #485070; border-bottom-width: 2px; font-size: 11px;
+      font-weight: 700; color: #e8ecf6; }
+    .mouse { width: 18px; height: 24px; }
+    .mouse .body { fill: #2b3245; stroke: #8a93ad; stroke-width: 1.5; }
+    .mouse .on { fill: #ffd34d; }
+    #controls .hide { position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 6px; background: none;
+      color: var(--muted); font-size: 16px; line-height: 1; }
+    #show-help { display: none; }
+    body.help-hidden #show-help { display: inline-block; }
 
     body.playing #landing { display: none; }
-    body.playing #hud { display: flex; }
-    body.in-xr #landing, body.in-xr #hud { display: none; }
+    body.playing #hud { display: block; }
+    body.playing:not(.help-hidden) #controls { display: block; }
+    body.in-xr #landing, body.in-xr #hud, body.in-xr #controls { display: none; }
     @media (max-width: 600px) {
       #landing { align-items: flex-end; background: linear-gradient(0deg, rgba(11,14,22,0.96) 55%, rgba(11,14,22,0.2) 100%); }
       .intro { margin-left: 0; }
-      #help { display: none; }
+      #controls { display: none !important; }
     }
   </style>
   <script type="importmap">
@@ -89,26 +110,35 @@
   </main>
 
   <div id="hud">
-    <div class="card stat">Budget<b id="budget">–</b></div>
-    <div class="card stat">Score<b id="score">–</b></div>
-    <div class="card stat">Hand<b id="hand">–</b></div>
-    <div class="card">
+    <div class="card topbar">
+      <div class="stat">Budget<b id="budget">–</b></div>
+      <div class="stat">Score<b id="score">–</b></div>
+      <span class="over-tag">Game over</span>
       <div class="buttons">
         <button id="restart">New game</button>
         <button id="back" class="secondary">Back</button>
+        <button id="show-help" class="secondary" title="Show controls">?</button>
       </div>
     </div>
-    <div class="card" id="help">
-      <b>How to play.</b> Drag a building from your hand (the row at the front) onto the terrain.
-      Support beams must reach the ground, a resource node or a Sky Platform, and each beam's length costs
-      money. Buildings next to the right neighbours earn money: watch the green radius and the +/− badges.
-      When a hand is used up, pick the next one on the sign above the budget; score milestones add a new
-      building pack. Point at a resource node to see what it is. If the budget drops below 0, the game is over.<br>
-      <b>Mouse:</b> left-drag a building to place it (it sits on the ground; wheel up lifts it, wheel down
-      brings it back to the ground), Z/X = rotate it. Camera like Unity: hold the right button and drag to
-      look around, W A S D or the arrow keys to move, Q/E down / up, Shift = faster, wheel = forward / back,
-      middle-drag = pan.
-    </div>
+  </div>
+
+  <div id="controls" class="card">
+    <button class="hide" id="hide-help" title="Hide">×</button>
+    <div class="goal">Place buildings next to neighbours that like them. Each one pays or costs <b>budget</b>.
+      Below 0, the game is over.</div>
+    <h3>Building</h3>
+    <ul>
+      <li><span class="keys"><svg class="mouse" viewBox="0 0 18 24"><rect class="body" x="1" y="1" width="16" height="22" rx="8"/><path class="on" d="M9 1.8 A7.2 7.2 0 0 0 1.8 9 V10 H9 Z"/></svg><span class="k">drag</span></span>move it</li>
+      <li><span class="keys"><svg class="mouse" viewBox="0 0 18 24"><rect class="body" x="1" y="1" width="16" height="22" rx="8"/><rect class="on" x="7.5" y="4" width="3" height="6" rx="1.5"/></svg></span>lift / lower it</li>
+      <li><span class="keys"><span class="k">Z</span><span class="k">X</span></span>rotate it</li>
+    </ul>
+    <h3>Camera</h3>
+    <ul>
+      <li><span class="keys"><svg class="mouse" viewBox="0 0 18 24"><rect class="body" x="1" y="1" width="16" height="22" rx="8"/><path class="on" d="M9 1.8 A7.2 7.2 0 0 1 16.2 9 V10 H9 Z"/></svg><span class="k">drag</span></span>look around</li>
+      <li><span class="keys"><span class="k">W</span><span class="k">A</span><span class="k">S</span><span class="k">D</span></span>move</li>
+      <li><span class="keys"><span class="k">Q</span><span class="k">E</span></span>down / up</li>
+      <li><span class="keys"><svg class="mouse" viewBox="0 0 18 24"><rect class="body" x="1" y="1" width="16" height="22" rx="8"/><rect class="on" x="7.5" y="4" width="3" height="6" rx="1.5"/></svg></span>forward / back</li>
+    </ul>
   </div>
 
   <script type="module" src="src/main.js"></script>
