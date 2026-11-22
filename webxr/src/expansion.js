@@ -12,6 +12,8 @@ export function mergeExpansion(data, ext) {
     data.blocks[key] = { ...block, meshes: block.meshes.map(meshEntry) };
   }
   Object.assign(data.buildingInfo, ext.buildingInfo ?? {});
+  // extra fields on existing entries (e.g. nicer names and tooltips for the Unity resource nodes)
+  for (const [key, add] of Object.entries(ext.infoAdd ?? {})) Object.assign(data.buildingInfo[key], add);
   for (const [key, add] of Object.entries(ext.scoringAdd ?? {})) {
     Object.assign(data.buildingInfo[key].scoring, add);
   }

@@ -33,7 +33,7 @@
     },
     "SkyPlatform": {
       "displayName": "Sky Platform", "detectDistance": 0.0,
-      "note": "Build on top of it",
+      "note": "Build on top of it", "standOn": true,
       "scoring": {}
     },
     "WeatherStation": {
@@ -48,6 +48,12 @@
     },
     "IceCloud": { "displayName": "Ice Cloud", "detectDistance": 0.0, "scoring": {} },
     "CrystalVein": { "displayName": "Crystal Vein", "detectDistance": 0.0, "scoring": {} }
+  },
+  "infoAdd": {
+    "OreNode": { "displayName": "Ore Rocks", "about": "Orange rocks full of metal ore." },
+    "GasNode": { "displayName": "Gas Vent", "about": "Gas seeping out of the ground." },
+    "IceCloud": { "about": "Ice that floats in the sky. It re-forms elsewhere once used up." },
+    "CrystalVein": { "about": "Crystals growing out of the cliff walls." }
   },
   "scoringAdd": {
     "Factory": { "CliffDrill": 4 },

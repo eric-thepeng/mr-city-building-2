@@ -184,7 +184,7 @@ export class XRInput {
     if (best) return best;
     const ray = this._rayFrom(s);
     targets.length = 0;
-    for (const c of colliders) targets.push(c);
+    for (const c of this.game.hoverables()) targets.push(c); // resource nodes: hover only, for their tooltip
     for (const b of this.buttons) if (b.mesh.visible) targets.push(b.mesh);
     const hit = ray.intersectObjects(targets, false)[0];
     if (!hit) return null;
@@ -382,7 +382,8 @@ export class MouseInput {
           let h = hf.at(tmpV2.x, tmpV2.z);
           this.probe.set(tmpV.setY(board.position.y + 100 * k), DOWN);
           const hit = this.probe.intersectObjects(solids, false)[0];
-          if (hit) h = Math.max(h, (hit.point.y - board.position.y) / k);
+          const on = hit?.object.userData.building;
+          if (hit && (!on || on.isResource || on.info.standOn)) h = Math.max(h, (hit.point.y - board.position.y) / k);
           top = Math.max(top, h);
         }
         // board is only yawed and uniformly scaled, so heights convert directly
@@ -400,13 +401,13 @@ export class MouseInput {
       }
       return;
     }
-    const hit = this.raycaster.intersectObjects(this.game.grabbables(), false)[0];
+    const hit = this.raycaster.intersectObjects(this.game.hoverables(), false)[0];
     const hovered = hit ? hit.object.userData.building : null;
     if (hovered !== this.hovered) {
       this.hovered?.onHoverEnd();
       hovered?.onHoverStart();
       this.hovered = hovered;
-      this.dom.style.cursor = hovered ? 'grab' : '';
+      this.dom.style.cursor = hovered && !hovered.isResource ? 'grab' : '';
     }
   }
 

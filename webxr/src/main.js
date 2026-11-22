@@ -94,6 +94,7 @@ async function main() {
   game.audio = makeAudio();
   game.events.addEventListener('money', (e) => { $('budget').textContent = e.amount; });
   game.events.addEventListener('hand', (e) => { $('hand').textContent = e.preset.name.replace('_', ' '); });
+  game.events.addEventListener('over', () => { $('hand').textContent = 'Game over'; });
   game.events.addEventListener('score', (e) => { $('score').textContent = `${e.score} / ${e.next}`; });
   // ?unlock: every building pack from the start (skips the milestones, for trying things out)
   game.progress.unlockAll = params.has('unlock');

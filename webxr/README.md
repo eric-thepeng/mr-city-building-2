@@ -1,4 +1,4 @@
-# MR City Building — WebXR
+# Mars Homecoming (MR City Building) — WebXR
 
 A browser port of the Unity game on `main`, built with [three.js](https://threejs.org) and WebXR.
 **Live: <https://mars.pengguo.net>**
@@ -62,16 +62,29 @@ are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by 
 (`addRockStrata` in `src/assets.js`). Shapes and positions are set in `cliffHeight`, `VEINS` and `CLOUDS` in
 `tools/bake.js`.
 
-### Milestones and packs
+### Hands, milestones and packs
+
+The first hand of a game is random. When a hand is used up, the sign above the budget shows **two hand
+cards** (the buildings turning on top, and what is in the hand); pinch, point at or click one to deal it.
 
 **Score** counts every point placements earned or lost; it is separate from the budget. At score
-milestones (20, 50, 90, 140, 200, then every 80) the sign above the budget offers two building **packs**
-(cards that show the new buildings turning on top, what each one scores, the bonuses they add to
-existing buildings, and the pack's hands; the text is generated from the data in `Progress.describe`);
-pick one by pinching, pointing or clicking it. The next hand comes from that pack, and its hand presets
-join the deck. The game starts with Unity's 10 hand presets. Once all three packs (Highlander, Skywatch,
-Cliffside) are unlocked, a milestone pays +30 budget instead. Add **`?unlock`** to the address to start
-with every pack.
+milestones (20, 50, 90, 140, 200, then every 80) a **random** locked building pack joins the deck, and a
+green card shows what it adds: what each new building scores, the bonuses it gives existing buildings,
+and the pack's hands (text generated from the data in `Progress.describe`; tap the card to close it). The
+new pack's first hand is one of the two choices at the next pick. Once all three packs (Highlander,
+Skywatch, Cliffside) are in, a milestone pays +30 budget instead. Add **`?unlock`** to the address to
+start with every pack.
+
+**Game over:** when the budget drops below 0 (neighbours can cost money), the sign says so and the
+remaining buildings can't be picked up; **New game** starts again.
+
+**Support beams** stand on the ground, on resource nodes, or on the top of a building made for it
+(`"standOn": true` in `expansion.json`; only the Sky Platform today). A beam that lands on any other
+building shows "can't stand on …".
+
+**Resource nodes** show a tooltip when the mouse or an XR ray points at them: what they are and which
+buildings earn next to them (and whether those are unlocked yet). Gas vents puff: a few clouds sway around
+the vent and others rise into the air (all puffs are one instanced mesh).
 
 Placing a building gives a small squash-and-stretch and a dust ring.
 

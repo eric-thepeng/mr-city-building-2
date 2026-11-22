@@ -35,8 +35,9 @@ class MoneyManager {
     this.updateUI();
   }
   updateUI() {
-    this.label.set(`Budget: ${this.amount}`);
+    this.label.set(`Budget: ${this.amount}`, { fg: this.amount < 0 ? '#ff6b6b' : '#ffe27a' });
     this.game.events.dispatchEvent({ type: 'money', amount: this.amount });
+    if (this.amount < 0) this.game.endGame?.();
   }
   uiPosition(target) { return this.label.mesh.getWorldPosition(target); }
 }
@@ -46,37 +47,46 @@ class HandManager {
   constructor(game) {
     this.game = game;
     this.preset = null;
-    this.next = null;
     this.built = 0;
   }
   get total() { return Object.values(this.preset.buildings).reduce((a, b) => a + b, 0); }
-  refresh() {
-    const pool = this.game.progress.pool();
-    this.preset = this.next ?? pool[Math.floor(Math.random() * pool.length)];
-    this.next = null; // set when a pack is picked: its first hand comes next
+
+  /** Lines up a hand's buildings in the row at the front. */
+  deal(preset) {
+    this.preset = preset;
     this.built = 0;
-    this.game.money.gain(this.preset.freeMoney);
+    this.game.money.gain(preset.freeMoney);
     const spawn = this.game.spawnCenter;
     const spacing = this.game.data.buildingSpawn.spacing;
     const total = this.total;
     let i = 0;
-    for (const [key, count] of Object.entries(this.preset.buildings)) {
+    for (const [key, count] of Object.entries(preset.buildings)) {
       for (let n = 0; n < count; n++) {
         const pos = spawn.clone().setX(spawn.x + spacing * (i - (total - 1) / 2));
         this.game.addBuilding(new Building(this.game, key, { position: pos }));
         i++;
       }
     }
-    this.game.events.dispatchEvent({ type: 'hand', preset: this.preset });
+    this.game.events.dispatchEvent({ type: 'hand', preset });
   }
+
+  /** The first hand of a game is random; after that the player picks one of two. */
+  dealRandom() {
+    const pool = this.game.progress.pool();
+    this.deal(pool[Math.floor(Math.random() * pool.length)]);
+  }
+
   buildOne() {
     this.built += 1;
-    if (this.built === this.total) this.refresh();
+    if (this.built < this.total) return;
+    this.preset = null;
+    this.game.progress.offerHands();
   }
 }
 
 // ------------------------------------------------------------------ Progress
-// Score milestones unlock building packs (the way Islanders hands out new buildings).
+// The sign above the budget. Score milestones unlock a random building pack (shown on a
+// card), and when a hand is used up the player picks the next one from two cards.
 // Score = every point placements earned, minus the ones they lost; the budget is separate.
 class Progress {
   constructor(game) {
@@ -89,31 +99,38 @@ class Progress {
     this.title = new Label({ height: 0.014 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false });
     this.title.visible = false;
     anchor.add(this.label.mesh, this.title.mesh);
-    // Two pack cards side by side, each with the pack's new buildings standing on top of it.
-    this.options = [0, 1].map(() => {
-      const card = new Label({
-        height: 0.0105 * ui, bg: 'rgba(28,70,160,0.95)', fg: '#ffffff', accent: '#ffe27a', align: 'left', billboard: false,
-      });
-      card.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
-      card.visible = false;
+    // a card with small copies of buildings turning on top of it
+    const card = (bg) => {
+      const c = new Label({ height: 0.0105 * ui, bg, fg: '#ffffff', accent: '#ffe27a', align: 'left', billboard: false });
+      c.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
+      c.visible = false;
       const models = new THREE.Group();
       models.visible = false;
-      anchor.add(card.mesh, models);
-      const option = { card, models, pack: null };
-      game.addButton(card.mesh, () => { if (option.pack) this.choose(option.pack); });
-      return option;
+      anchor.add(c.mesh, models);
+      return { card: c, models };
+    };
+    this.hands = [0, 1].map(() => {
+      const o = card('rgba(28,70,160,0.95)');
+      o.preset = null;
+      game.addButton(o.card.mesh, () => { if (o.preset) this.pickHand(o.preset); });
+      return o;
     });
+    this.notice = card('rgba(18,112,84,0.95)');
+    game.addButton(this.notice.card.mesh, () => this.closeNotice());
     // buildings that were in the game before the expansion (their packs add bonuses to them)
     this.base = new Set(game.data.handPresets.flatMap((p) => Object.keys(p.buildings)));
+    this.flashUntil = 0;
     this.reset();
   }
 
   reset() {
     this.score = 0;
     this.level = 0;
-    this.owed = 0;
     this.unlocked = new Set(this.unlockAll ? this.game.data.packs.map((p) => p.name) : []);
-    this.hideChoice();
+    this.fresh = []; // packs just unlocked: their first hand is offered at the next pick
+    this.flashUntil = 0;
+    this.hideHands();
+    this.closeNotice();
     this.updateUI();
   }
 
@@ -141,22 +158,27 @@ class Progress {
     this.updateUI();
   }
 
+  /** A milestone: a random locked pack joins the deck (or, once all are in, some budget). */
   reach() {
     this.game.sfx('milestone');
-    if (this.offering) { this.owed++; return; }
     const locked = this.locked();
-    if (locked.length) this.offer(locked);
-    else this.bonus();
+    if (!locked.length) {
+      const n = this.game.data.milestoneBonus;
+      this.game.money.gain(n);
+      this.flash(`Milestone! +${n} budget`, 2.5);
+      return;
+    }
+    const pack = locked[Math.floor(Math.random() * locked.length)];
+    this.unlocked.add(pack.name);
+    this.fresh.push(pack);
+    this.showNotice(pack);
+    this.game.events.dispatchEvent({ type: 'pack', pack });
   }
 
-  /** Every pack is unlocked: a milestone pays budget instead. */
-  bonus() {
-    const n = this.game.data.milestoneBonus;
-    this.game.money.gain(n);
-    this.title.set(`Milestone! +${n} budget`);
-    this.title.mesh.position.set(0, 0.075 * this.game.ui, 0);
-    this.title.visible = true;
-    this.game.addTween({ duration: 2.5, update: () => {}, done: () => { if (!this.offering) this.title.visible = false; } });
+  // --- cards -----------------------------------------------------------
+  name(k) {
+    // "LivingPod" -> "Living Pod"
+    return (this.game.data.buildingInfo[k]?.displayName ?? k).replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
   /** The new buildings of a pack (the ones the base game does not have). */
@@ -168,10 +190,10 @@ class Progress {
   /** The text on a pack's card: what each new building scores, what it adds to old ones, its hands. */
   describe(pack) {
     const info = this.game.data.buildingInfo;
-    const name = (k) => (info[k]?.displayName ?? k).replace(/([a-z])([A-Z])/g, '$1 $2'); // "LivingPod" -> "Living Pod"
+    const name = (k) => this.name(k);
     const cm = (v) => +(v * BOARD_SCALE * 100).toFixed(1);
     const fresh = this.newBuildings(pack);
-    const lines = [`#${pack.displayName.toUpperCase()}`, pack.blurb ?? pack.summary];
+    const lines = [`#NEW PACK: ${pack.displayName.toUpperCase()}`, pack.blurb ?? pack.summary];
     for (const k of fresh) {
       const b = info[k];
       lines.push(b.detectDistance > 0 ? `#${b.displayName} · range ${cm(b.detectDistance)} cm` : `#${b.displayName}`);
@@ -195,96 +217,163 @@ class Progress {
       for (const l of liked) lines.push(`  ${l}`);
     }
     lines.push('#Hands');
-    for (const p of pack.presets) {
-      lines.push(`  ${Object.entries(p.buildings).map(([k, n]) => `${n > 1 ? `${n}× ` : ''}${name(k)}`).join(' + ')}`);
-    }
+    for (const p of pack.presets) lines.push(`  ${this.handLine(p)}`);
+    lines.push('(tap to close)');
     return lines.join('\n');
   }
 
-  /** Small copies of the pack's new buildings, turning slowly on top of its card. */
-  fillModels(group, pack) {
+  handLine(preset) {
+    return Object.entries(preset.buildings).map(([k, n]) => `${n > 1 ? `${n}× ` : ''}${this.name(k)}`).join(' + ');
+  }
+
+  /** Small copies of buildings, turning slowly on top of a card. */
+  fillModels(group, keys) {
     for (const c of [...group.children]) c.removeFromParent();
-    const keys = this.newBuildings(pack);
     const box = new THREE.Box3();
     const size = new THREE.Vector3();
-    const gap = 0.075 * this.game.ui;
+    const gap = 0.06 * this.game.ui;
     keys.forEach((k, i) => {
       const m = this.game.assets.instance(`block_${k}`);
       box.setFromObject(m, true);
       box.getSize(size);
-      const s = Math.min(1.3, (0.05 * this.game.ui) / Math.max(size.y, 0.001));
+      const s = Math.min(1.3, (0.045 * this.game.ui) / Math.max(size.y, 0.001), (0.055 * this.game.ui) / Math.max(size.x, size.z, 0.001));
       m.scale.setScalar(s);
       const holder = new THREE.Group();
       holder.add(m);
       m.position.y = -box.min.y * s; // stand on the card
       holder.position.x = (i - (keys.length - 1) / 2) * gap;
-      holder.userData.spin = true;
       group.add(holder);
     });
   }
 
-  offer(locked) {
-    const ui = this.game.ui;
-    const picks = [...locked].sort(() => Math.random() - 0.5).slice(0, 2);
-    this.offering = true;
-    const shown = this.options.filter((o, i) => (o.pack = picks[i] ?? null));
-    for (const o of this.options) {
-      o.card.visible = !!o.pack;
-      o.models.visible = !!o.pack;
-      if (!o.pack) continue;
-      o.card.set(this.describe(o.pack));
-      this.fillModels(o.models, o.pack);
+  showNotice(pack) {
+    const n = this.notice;
+    n.pack = pack;
+    n.card.set(this.describe(pack));
+    this.fillModels(n.models, this.newBuildings(pack));
+    n.card.visible = true;
+    n.models.visible = true;
+    this.layout();
+  }
+
+  closeNotice() {
+    const n = this.notice;
+    n.pack = null;
+    n.card.visible = false;
+    n.models.visible = false;
+    this.layout();
+  }
+
+  /** The hand is used up: offer two hands (a just-unlocked pack's hand is always one of them). */
+  offerHands() {
+    if (this.game.over) return;
+    const picks = [];
+    const freshPack = this.fresh.shift();
+    if (freshPack) picks.push({ preset: freshPack.presets[0], pack: freshPack });
+    const pool = this.pool().filter((p) => !picks.some((q) => q.preset === p));
+    while (picks.length < 2 && pool.length) picks.push({ preset: pool.splice(Math.floor(Math.random() * pool.length), 1)[0], pack: null });
+    this.hands.forEach((o, i) => {
+      const pick = picks[i];
+      o.preset = pick?.preset ?? null;
+      o.card.visible = !!pick;
+      o.models.visible = !!pick;
+      if (!pick) return;
+      const p = pick.preset;
+      const lines = [`#${p.name.replace('_', ' ')}${pick.pack ? ` · NEW (${pick.pack.displayName})` : ''}`];
+      for (const [k, n] of Object.entries(p.buildings)) lines.push(`  ${n}× ${this.name(k)}`);
+      if (p.freeMoney) lines.push(`  +${p.freeMoney} budget`);
+      o.card.set(lines.join('\n'));
+      this.fillModels(o.models, Object.keys(p.buildings));
+    });
+    this.choosing = true;
+    this.layout();
+  }
+
+  pickHand(preset) {
+    if (this.game.over) return;
+    this.hideHands();
+    this.closeNotice();
+    this.game.sfx('build');
+    this.game.hand.deal(preset);
+  }
+
+  hideHands() {
+    this.choosing = false;
+    for (const o of this.hands) {
+      o.preset = null;
+      o.card.visible = false;
+      o.models.visible = false;
     }
-    // lay the cards out from their real sizes so they never overlap
+    this.layout();
+  }
+
+  /** The game is over (budget below 0): clear the choices and say so. */
+  gameOver() {
+    this.hideHands();
+    this.closeNotice();
+    this.flashUntil = 0;
+    this.layout();
+  }
+
+  /** Lays the visible cards out in a row (from their real sizes) with the title above. */
+  layout() {
+    const ui = this.game.ui;
+    const items = [this.notice, ...this.hands].filter((o) => o.card.wanted);
     const base = 0.052 * ui;
     const gap = 0.012 * ui;
-    const widths = shown.map((o) => o.card.mesh.scale.x);
-    const total = widths.reduce((a, b) => a + b, 0) + gap * (shown.length - 1);
+    // each card gets a slot at least as wide as the row of models standing on it
+    const slot = (o) => Math.max(o.card.mesh.scale.x, o.models.children.length * 0.06 * ui);
+    const total = items.reduce((a, o) => a + slot(o), 0) + gap * Math.max(0, items.length - 1);
     let x = -total / 2;
     let top = 0;
-    shown.forEach((o, i) => {
-      const { x: w, y: h } = o.card.mesh.scale;
+    for (const o of items) {
+      const w = slot(o);
+      const h = o.card.mesh.scale.y;
       o.card.mesh.position.set(x + w / 2, base + h / 2, 0);
       o.models.position.set(x + w / 2, base + h + 0.004 * ui, 0.01 * ui);
       x += w + gap;
       top = Math.max(top, h);
-    });
-    this.title.set('Milestone! Tap a pack to add it');
-    this.title.mesh.position.set(0, base + top + 0.085 * ui, 0);
-    this.title.visible = true;
+    }
+    this.titleY = items.length ? base + top + 0.075 * ui : 0.075 * ui;
+    this.refreshTitle();
   }
 
-  choose(pack) {
-    this.unlocked.add(pack.name);
-    this.game.hand.next = pack.presets[0]; // the next hand comes from the new pack
-    this.hideChoice();
-    this.game.sfx('build');
-    this.game.events.dispatchEvent({ type: 'pack', pack });
-    if (this.owed > 0) {
-      this.owed--;
-      const locked = this.locked();
-      if (locked.length) this.offer(locked);
-      else this.bonus();
-    }
+  /** A short message on the title for a few seconds. */
+  flash(text, seconds) {
+    this.flashText = text;
+    this.flashUntil = this.game.time + seconds;
+    this.refreshTitle();
   }
 
-  hideChoice() {
-    this.offering = false;
-    this.title.visible = false;
-    for (const o of this.options) {
-      o.card.visible = false;
-      o.models.visible = false;
-      o.pack = null;
-    }
+  refreshTitle() {
+    const t = this.title;
+    let text = null;
+    let colours = {};
+    if (this.game.over) {
+      text = `Game over · score ${this.score} · tap New game`;
+      colours = { bg: 'rgba(214,58,58,0.95)', fg: '#ffffff' };
+    } else if (this.game.time < this.flashUntil) text = this.flashText;
+    else if (this.notice.pack) text = `Milestone! New pack: ${this.notice.pack.displayName}`;
+    else if (this.choosing) text = 'Pick your next hand';
+    t.visible = !!text;
+    if (!text) return;
+    t.set(text, colours);
+    t.mesh.position.set(0, this.titleY ?? 0.075 * this.game.ui, 0);
   }
 
   update(dt) {
-    if (!this.offering) return;
-    for (const o of this.options) for (const h of o.models.children) h.rotation.y += dt * 0.8;
+    if (this.flashUntil && this.game.time >= this.flashUntil) {
+      this.flashUntil = 0;
+      this.refreshTitle();
+    }
+    for (const o of [this.notice, ...this.hands]) {
+      if (o.models.visible) for (const h of o.models.children) h.rotation.y += dt * 0.8;
+    }
   }
 
   updateUI() {
-    this.label.set(`Score ${this.score} · next pack at ${this.nextAt}`);
+    const what = this.locked().length ? 'pack' : 'bonus';
+    this.label.set(`Score ${this.score} · next ${what} at ${this.nextAt}`);
     this.game.events.dispatchEvent({ type: 'score', score: this.score, next: this.nextAt });
   }
 }
@@ -300,6 +389,7 @@ export class Building {
     this.key = key;
     this.isResource = !!resource;
     this.isAir = !!resource?.air; // ice clouds: drawn on their own (they fade and move), never ground
+    this.resource = resource;
     this.info = game.data.buildingInfo[key];
     const assets = game.assets;
 
@@ -312,7 +402,6 @@ export class Building {
       def = { beams: [], maxBeamLength: 0 };
       this.root.position.fromArray(resource.p);
       this.root.quaternion.fromArray(resource.q);
-      if (resource.vfx) this.root.add(makeGasVfx(game));
     } else {
       def = game.data.blocks[key];
       this.root.position.copy(position);
@@ -396,7 +485,7 @@ export class Building {
     }
   }
 
-  get grabbable() { return this.state !== State.COMPLETE && !this.tween; }
+  get grabbable() { return this.state !== State.COMPLETE && !this.tween && !this.game.over; }
 
   // --- XRGrabInteractable events --------------------------------------
   onStartGrab() {
@@ -432,6 +521,7 @@ export class Building {
   }
 
   onHoverStart() {
+    if (this.isResource) return this.showNodeTip();
     if (this.state !== State.WAITING) return;
     const lines = [this.info.displayName];
     for (const [k, v] of Object.entries(this.info.scoring)) {
@@ -447,7 +537,34 @@ export class Building {
     panel.visible = true;
   }
 
+  /** Tooltip on a resource node: what it is and which buildings earn next to it. */
+  showNodeTip() {
+    const game = this.game;
+    const info = game.data.buildingInfo;
+    const pool = new Set(game.progress.pool().flatMap((p) => Object.keys(p.buildings)));
+    const lines = [`#${this.info.displayName}`];
+    if (this.info.about) lines.push(this.info.about);
+    const users = Object.entries(info)
+      .filter(([, b]) => (b.scoring?.[this.key] ?? 0) > 0)
+      .sort((a, b) => b[1].scoring[this.key] - a[1].scoring[this.key]);
+    if (users.length) lines.push('#Build next to it:');
+    for (const [k, b] of users) {
+      const used = b.consumes?.includes(this.key) ? ', uses it up' : '';
+      const locked = pool.has(k) ? '' : ' (not unlocked yet)';
+      lines.push(`  ${game.progress.name(k)} +${b.scoring[this.key]}${used}${locked}`);
+    }
+    const panel = game.nodePanel;
+    panel.set(lines.join('\n'));
+    panel.mesh.position.set(0, this.localBox.max.y + 0.03 * game.ui, 0);
+    this.root.add(panel.mesh);
+    panel.visible = true;
+  }
+
   onHoverEnd() {
+    if (this.isResource) {
+      if (this.game.nodePanel.mesh.parent === this.root) this.game.nodePanel.visible = false;
+      return;
+    }
     const panel = this.game.infoPanel;
     if (panel.mesh.parent === this.root) panel.visible = false;
   }
@@ -457,6 +574,7 @@ export class Building {
     if (this.state !== State.ONGOING) return;
     let canBuild = true;
     let total = 0;
+    this.blockedBy = null;
     for (const beam of this.beams) {
       const len = this.calculateSupportBeam(beam);
       if (len === -1) canBuild = false;
@@ -466,7 +584,9 @@ export class Building {
     if (!canBuild) {
       this.currentCost = -1;
       // a beam would be longer than this building allows (too high, or over a cliff edge)
-      this.nameLabel.set(`beams too long (max ${+(this.maxBeamLength * BOARD_SCALE * 100).toFixed(1)} cm)`, { fg: '#ff5a5a' });
+      this.nameLabel.set(this.blockedBy
+        ? `can't stand on ${this.game.progress.name(this.blockedBy.key)}`
+        : `beams too long (max ${+(this.maxBeamLength * BOARD_SCALE * 100).toFixed(1)} cm)`, { fg: '#ff5a5a' });
       this.setDisplayState(false);
     } else {
       this.currentCost = Math.trunc(total * (this.def.beamCost ?? 100)); // money per game unit of beam
@@ -495,6 +615,13 @@ export class Building {
     const hit = ray.intersectObjects(game.obstacleTargets(this), false)[0];
     if (hit) distance = hit.distance / k;
     this.adjustBeam(beam, distance);
+    // a finished building that is not a platform: the beam may not stand on it
+    const other = hit?.object.userData.building;
+    if (other && !other.isResource && !other.info.standOn) {
+      this.blockedBy = other;
+      beam.body.material = this.game.beamErrorMaterial;
+      return -1;
+    }
     return distance > this.maxBeamLength ? -1 : distance;
   }
 
@@ -678,9 +805,14 @@ export class Game {
     this.colliderMaterial = new THREE.MeshBasicMaterial({ visible: false });
     this.gasGeometry = new THREE.SphereGeometry(1, 8, 6);
     // every gas puff is in step, so they all share one material
-    this.gasMaterial = new THREE.MeshBasicMaterial({ color: 0x9cf5c4, transparent: true, opacity: 0.5, depthWrite: false });
+    this.gasMaterial = new THREE.MeshBasicMaterial({ color: 0x9cf5c4, transparent: true, opacity: 0.55, depthWrite: false });
     this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
     this.infoPanel.visible = false;
+    this.nodePanel = new Label({
+      height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', accent: '#1d5fd1', align: 'left', renderOrder: 12,
+    });
+    this.nodePanel.visible = false;
+    this.over = false; // budget fell below 0
 
     this.ringGeometry = new THREE.RingGeometry(0.6, 1, 24).rotateX(-Math.PI / 2);
     this.buttons = []; // in-world buttons { mesh, onPress }, pressed by hands, controllers or the mouse
@@ -705,9 +837,20 @@ export class Game {
       c.phase = i * 1.7;
     });
     this.reforms = []; // { cloud, wait }: used-up clouds, re-forming after `wait` more buildings
+    this.gasVents = makeGasVents(this, this.buildings.filter((b) => b.resource?.vfx));
+    this.board.add(this.gasVents);
   }
 
-  start() { this.hand.refresh(); }
+  start() { this.hand.dealRandom(); }
+
+  /** Budget below 0: the game is lost. Waiting buildings can no longer be picked up. */
+  endGame() {
+    if (this.over) return;
+    this.over = true;
+    this.sfx('fail');
+    this.progress.gameOver();
+    this.events.dispatchEvent({ type: 'over', score: this.progress.score });
+  }
 
   restart() {
     for (const b of [...this.buildings]) {
@@ -717,6 +860,7 @@ export class Game {
       }
     }
     this.tweens.length = 0;
+    this.over = false;
     this.money.amount = this.data.startingMoney;
     this.money.updateUI();
     for (const r of this.reforms) this.removeGhost(r.ghost);
@@ -730,9 +874,8 @@ export class Game {
       c.canScore = true;
     }
     this.progress.reset();
-    this.hand.next = null;
     this.cancelAllBadges();
-    this.hand.refresh();
+    this.hand.dealRandom();
   }
 
   addButton(mesh, onPress) {
@@ -905,6 +1048,16 @@ export class Game {
     b.root.position.copy(this.board.worldToLocal(tmpV.copy(worldPos)));
   }
 
+  /** What a pointer can hover: hand buildings, plus resource nodes (they show a tooltip). */
+  hoverables() {
+    const out = this._hover ??= [];
+    out.length = 0;
+    for (const b of this.buildings) {
+      if (b.grabbable || (b.isResource && !b.depleted)) out.push(b.collider);
+    }
+    return out;
+  }
+
   // The two lists below are rebuilt into reused arrays (no per-frame garbage).
   grabbables() {
     const out = this._grab;
@@ -967,22 +1120,48 @@ function easeOutQuad(t) { return 1 - (1 - t) * (1 - t); }
 function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
 
 // Stand-in for the Unity VFX Graph gas plume: one rising, fading puff (cheap on Specs).
-function makeGasVfx(game) {
-  const group = new THREE.Group();
-  const puffs = [0].map((phase) => {
-    const m = new THREE.Mesh(game.gasGeometry, game.gasMaterial);
-    m.raycast = () => {};
-    group.add(m);
-    return { m, phase };
-  });
-  group.userData.update = (time) => {
-    for (const p of puffs) {
-      const t = (time * 0.35 + p.phase) % 1;
-      p.m.position.set(0, 0.005 + t * 0.06, 0);
-      p.m.scale.setScalar(0.005 + t * 0.01);
-      p.m.material.opacity = 0.5 * (1 - t);
-    }
+/**
+ * Gas vents: around each vent a few puffs drift back and forth, and others rise into the
+ * air, swell and thin out. All puffs on the board are one instanced mesh (one draw call).
+ */
+function makeGasVents(game, vents) {
+  const LOW = 3;
+  const RISE = 3;
+  const per = LOW + RISE;
+  const mesh = new THREE.InstancedMesh(game.gasGeometry, game.gasMaterial, Math.max(1, vents.length * per));
+  mesh.count = vents.length * per;
+  mesh.frustumCulled = false;
+  mesh.raycast = () => {};
+  const homes = vents.map((v) => v.root.position.clone());
+  const m = new THREE.Matrix4();
+  const p = new THREE.Vector3();
+  const q = new THREE.Quaternion();
+  const sc = new THREE.Vector3();
+  mesh.userData.animated = true;
+  mesh.userData.update = (time) => {
+    homes.forEach((home, v) => {
+      const seed = v * 1.93;
+      for (let i = 0; i < per; i++) {
+        let size;
+        if (i < LOW) {
+          // low puffs sway around the vent mouth
+          const a = time * (0.9 + 0.25 * i) + seed + i * 2.1;
+          p.set(Math.sin(a) * 0.022, 0.006 + 0.004 * Math.sin(a * 1.7), Math.cos(a * 0.8) * 0.016);
+          size = 0.011 + 0.003 * Math.sin(a * 1.3);
+        } else {
+          // rising puffs: up, drifting, swelling then fading out (shrinking) at the top
+          const t = (time * 0.28 + seed + (i - LOW) / RISE) % 1;
+          const drift = Math.sin(time * 0.7 + seed + i) * 0.02 * t;
+          p.set(drift, 0.01 + t * 0.12, Math.cos(time * 0.5 + seed + i) * 0.012 * t);
+          size = (0.008 + 0.012 * t) * Math.min(1, (1 - t) * 3);
+        }
+        p.add(home);
+        sc.setScalar(Math.max(size, 0.0001));
+        mesh.setMatrixAt(v * per + i, m.compose(p, q, sc));
+      }
+    });
+    mesh.instanceMatrix.needsUpdate = true;
   };
-  group.userData.animated = true;
-  return group;
+  mesh.userData.update(0);
+  return mesh;
 }
