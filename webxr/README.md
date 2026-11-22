@@ -66,7 +66,7 @@ are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by 
 
 The first hand of a game is random. When a hand is used up, a framed **choice panel** stands in the hand
 row in front of the player with **two hand cards** (the buildings shown at 45°, and what is in the hand);
-pinch, point at or click a card to deal it. Hovering a building on a card shows what it scores. The budget sign shows the score and how many points are left until
+pinch, point at or click a card to deal it. Hovering a building shows what it scores: what it likes on the left in green, what it dislikes on the right in red. The budget sign shows the score and how many points are left until
 the next unlock. A building can't be placed where its box cuts into a finished building ("too close to …").
 
 **Score** counts every point placements earned or lost; it is separate from the budget. At score

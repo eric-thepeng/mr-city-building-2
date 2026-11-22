@@ -94,6 +94,7 @@ class HandManager {
 // Score = every point placements earned, minus the ones they lost; the budget is separate.
 // width of one building on a choice card, in board units (before game.ui)
 const MODEL_SLOT = 0.066;
+const SCORE_CARD_BG = 'rgba(18,30,52,0.96)';
 
 class Progress {
   constructor(game) {
@@ -136,12 +137,11 @@ class Progress {
     this.frameFill.userData.building = { onHoverStart() {}, onHoverEnd() {}, onStartGrab: () => false };
     // score tooltip for the small buildings on the cards (the panel is scaled, so undo that)
     this.tip = new Label({
-      height: (0.0085 / anchor.scale.x) * ui, bg: 'rgba(255,255,255,0.96)', fg: '#1b2030', accent: '#1d5fd1',
-      align: 'left', depthTest: false, renderOrder: 14,
+      height: (0.0085 / anchor.scale.x) * ui, bg: SCORE_CARD_BG, depthTest: false, renderOrder: 14,
     });
     this.tip.visible = false;
     this.tipOwner = null;
-    this.title = new Label({ height: 0.013 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false });
+    this.title = new Label({ height: 0.013 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false, depthTest: false, renderOrder: 13 });
     anchor.add(this.title.mesh);
     // a card with small copies of buildings turning on top of it
     const card = (bg) => {
@@ -152,7 +152,7 @@ class Progress {
       anchor.add(c.mesh, models);
       return { card: c, models };
     };
-    this.notice = card('rgba(18,112,84,0.95)'); // only the Continue button closes it
+    this.notice = card('rgba(30,42,70,0.96)'); // only the Continue button closes it
     this.continueBtn = new Label({ height: 0.013 * ui, bg: 'rgba(45,108,223,0.95)', font: 800, billboard: false });
     this.continueBtn.mesh.raycast = THREE.Mesh.prototype.raycast;
     this.continueBtn.visible = false;
@@ -237,52 +237,56 @@ class Progress {
     return keys.filter((k) => !this.base.has(k));
   }
 
-  /** The text on a pack's card: what each new building scores, what it adds to old ones, its hands. */
+  /** A table of what a building scores: what it likes on the left, what it dislikes on the right. */
+  scoreTable(k) {
+    const b = this.game.data.buildingInfo[k];
+    const row = ([o, v]) => [this.name(o), `${v > 0 ? '+' : '\u2212'}${Math.abs(v)}`];
+    const entries = Object.entries(b.scoring);
+    const good = entries.filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).map(row);
+    const bad = entries.filter(([, v]) => v < 0).sort((x, y) => x[1] - y[1]).map(row);
+    if (b.altitude) good.push([`Height per ${this.cm(b.altitude.per)} cm`, `+${b.altitude.points}`]);
+    return good.length || bad.length ? { good, bad } : null;
+  }
+
+  cm(v) { return +(v * BOARD_SCALE * 100).toFixed(1); }
+
+  /** The hover card of a building: name, range, score table, and its special rule. */
+  scoreCard(k) {
+    const b = this.game.data.buildingInfo[k];
+    const blocks = [{ title: this.name(k) }];
+    if (b.detectDistance > 0) blocks.push({ sub: `Range ${this.cm(b.detectDistance)} cm` });
+    const table = this.scoreTable(k);
+    if (table) blocks.push(table);
+    if (b.note) blocks.push({ sub: b.note });
+    return blocks;
+  }
+
+  /** The card of a new pack: each new building's table, what it adds to old ones, its hands. */
   describe(pack) {
     const info = this.game.data.buildingInfo;
-    const name = (k) => this.name(k);
-    const cm = (v) => +(v * BOARD_SCALE * 100).toFixed(1);
     const fresh = this.newBuildings(pack);
-    const lines = [`#NEW PACK: ${pack.displayName.toUpperCase()}`, pack.blurb ?? pack.summary];
+    const blocks = [{ sub: pack.blurb ?? pack.summary }];
     for (const k of fresh) {
       const b = info[k];
-      lines.push(b.detectDistance > 0 ? `#${b.displayName} · range ${cm(b.detectDistance)} cm` : `#${b.displayName}`);
-      if (b.altitude) lines.push(`  +${b.altitude.points} for every ${cm(b.altitude.per)} cm of height`);
-      const entries = Object.entries(b.scoring).sort((x, y) => y[1] - x[1]);
-      const fmt = ([o, v]) => `${name(o)} ${v > 0 ? '+' : '−'}${Math.abs(v)}${b.consumes?.includes(o) ? ' (uses it up)' : ''}`;
-      const good = entries.filter(([, v]) => v > 0).map(fmt);
-      const bad = entries.filter(([, v]) => v < 0).map(fmt);
-      for (let i = 0; i < good.length; i += 2) lines.push(`  ${i ? '' : 'Near: '}${good.slice(i, i + 2).join(', ')}`);
-      if (bad.length) lines.push(`  Crowded: ${bad.join(', ')}`);
-      if (!entries.length && b.note) lines.push(`  ${b.note}`);
+      blocks.push({ heading: b.detectDistance > 0 ? `${this.name(k)} \u00b7 range ${this.cm(b.detectDistance)} cm` : this.name(k) });
+      const table = this.scoreTable(k);
+      if (table) blocks.push(table);
+      if (b.note) blocks.push({ sub: b.note });
     }
     // old buildings that now earn next to the new ones
     const liked = [];
     for (const [k, b] of Object.entries(info)) {
       if (!this.base.has(k)) continue;
-      for (const f of fresh) if ((b.scoring[f] ?? 0) > 0) liked.push(`${name(k)} +${b.scoring[f]} near ${name(f)}`);
+      for (const n of fresh) if ((b.scoring[n] ?? 0) > 0) liked.push([`${this.name(k)} near ${this.name(n)}`, `+${b.scoring[n]}`]);
     }
-    if (liked.length) {
-      lines.push('#Also');
-      for (const l of liked) lines.push(`  ${l}`);
-    }
-    lines.push('#Hands');
-    for (const p of pack.presets) lines.push(`  ${this.handLine(p)}`);
-    return lines.join('\n');
+    if (liked.length) blocks.push({ heading: 'Also' }, { good: liked, bad: [] });
+    blocks.push({ heading: 'Hands' });
+    for (const p of pack.presets) blocks.push({ text: this.handLine(p) });
+    return blocks;
   }
 
   handLine(preset) {
     return Object.entries(preset.buildings).map(([k, n]) => `${n > 1 ? `${n}× ` : ''}${this.name(k)}`).join(' + ');
-  }
-
-  /** What a building scores, one line per neighbour (first line: its name). */
-  scoreLines(k) {
-    const b = this.game.data.buildingInfo[k];
-    const lines = [this.name(k)];
-    for (const [o, v] of Object.entries(b.scoring)) lines.push(`${this.name(o)} ${v > 0 ? '+' : ''}${v}`);
-    if (b.altitude) lines.push(`Height +${b.altitude.points} per ${+(b.altitude.per * BOARD_SCALE * 100).toFixed(1)} cm`);
-    if (b.note) lines.push(b.note);
-    return lines;
   }
 
   /** Small copies of buildings on a card, fixed to it and turned 45 degrees. */
@@ -298,24 +302,29 @@ class Progress {
     const gap = MODEL_SLOT * ui;
     keys.forEach((k, i) => {
       const m = this.game.assets.instance(`block_${k}`);
+      m.traverse((o) => { o.raycast = () => {}; }); // only the cards are buttons
       box.setFromObject(m, true);
+      m.position.sub(box.getCenter(center)); // turn around its own middle
+      // seen from one corner and 45 degrees above (the panel itself faces the player)
+      const turn = new THREE.Group();
+      turn.rotation.set(Math.PI / 4, Math.PI / 4, 0);
+      turn.add(m);
+      turn.updateMatrixWorld(true);
+      // fit what the player actually sees, then stand it on the card
+      box.setFromObject(turn, true);
       box.getSize(size);
       box.getCenter(center);
-      const s = Math.min(1.3, (0.045 * ui) / Math.max(size.y, 0.001), (0.05 * ui) / Math.max(size.x, size.z, 0.001));
-      m.scale.setScalar(s);
-      m.traverse((o) => { o.raycast = () => {}; }); // only the cards are buttons
-      m.position.set(-center.x * s, -box.min.y * s, -center.z * s); // centred, standing on the card
-      const turn = new THREE.Group();
-      turn.rotation.set(0.38, Math.PI / 4, 0); // seen from the corner and a little from above
-      turn.add(m);
+      const s = Math.min(1.3, (MODEL_SLOT * 0.92 * ui) / Math.max(size.x, 0.001), (0.056 * ui) / Math.max(size.y, 0.001));
+      turn.scale.setScalar(s);
+      turn.position.set(-center.x * s, -box.min.y * s, -center.z * s);
       const holder = new THREE.Group();
       holder.position.x = (i - (keys.length - 1) / 2) * gap;
       holder.add(turn);
       // an invisible box: pointing at it shows what this building scores
-      const top = size.y * s + 0.012 * ui;
+      const top = size.y * s;
       const hit = new THREE.Mesh(this.game.boxGeometry, this.game.colliderMaterial);
       hit.scale.set(gap * 0.95, top, 0.06 * ui);
-      hit.position.y = top / 2 - 0.01 * ui;
+      hit.position.y = top / 2;
       hit.userData.building = {
         onHoverStart: () => this.showTip(k, holder, top),
         onHoverEnd: () => { if (this.tipOwner === holder) this.tip.visible = false; },
@@ -328,11 +337,9 @@ class Progress {
   }
 
   showTip(k, holder, top) {
-    const lines = this.scoreLines(k);
-    lines[0] = `#${lines[0]}`;
     const t = this.tip;
-    t.set(lines.join('\n'));
-    t.mesh.position.set(0, top + t.h / 2, 0.012 * this.game.ui);
+    t.setCard(this.scoreCard(k));
+    t.mesh.position.set(0, top + 0.004 * this.game.ui + t.h / 2, 0.012 * this.game.ui);
     holder.add(t.mesh);
     this.tipOwner = holder;
     t.visible = true;
@@ -350,7 +357,7 @@ class Progress {
   showNotice(pack) {
     const n = this.notice;
     n.pack = pack;
-    n.card.set(this.describe(pack));
+    n.card.setCard(this.describe(pack));
     this.fillModels(n.models, this.newBuildings(pack));
     n.card.visible = true;
     n.models.visible = true;
@@ -460,13 +467,13 @@ class Progress {
       const h = o.card.h;
       o.card.mesh.position.set(x + w / 2, h / 2, 0);
       // in front of the frame, so a turned building is never cut by it
-      o.models.position.set(x + w / 2, h + 0.016 * ui, 0.04 * ui);
+      o.models.position.set(x + w / 2, h + 0.006 * ui, 0.04 * ui);
       x += w + gap;
       top = Math.max(top, h);
     }
     this.title.set(this.notice.pack ? `New pack unlocked: ${this.notice.pack.displayName}` : 'Pick your next hand');
     this.title.visible = true;
-    const titleY = top + 0.074 * ui + this.title.mesh.scale.y / 2;
+    const titleY = top + 0.08 * ui + this.title.mesh.scale.y / 2;
     this.title.mesh.position.set(0, titleY, 0);
     // the frame around everything
     const w = Math.max(total, this.title.mesh.scale.x) + pad * 2;
@@ -682,9 +689,8 @@ export class Building {
     if (this.isResource) return this.showNodeTip();
     if (this.state === State.COMPLETE) return this.showTip(`#${this.game.progress.name(this.key)}`);
     if (this.state !== State.WAITING) return;
-    const lines = this.game.progress.scoreLines(this.key);
     const panel = this.game.infoPanel;
-    panel.set(lines.join('\n'));
+    panel.setCard(this.game.progress.scoreCard(this.key));
     // bottom edge just above the name label, so the panel grows upwards
     panel.mesh.position.set(0, this.top + 0.02 * this.game.ui + panel.mesh.scale.y / 2, 0);
     this.root.add(panel.mesh);
@@ -980,7 +986,7 @@ export class Game {
     this.gasGeometry = new THREE.SphereGeometry(1, 8, 6);
     // every gas puff is in step, so they all share one material
     this.gasMaterial = new THREE.MeshBasicMaterial({ color: 0x9cf5c4, transparent: true, opacity: 0.55, depthWrite: false });
-    this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
+    this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: SCORE_CARD_BG, depthTest: false, renderOrder: 14 });
     this.infoPanel.visible = false;
     this.nodePanel = new Label({
       height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', accent: '#1d5fd1', align: 'left', renderOrder: 12,
