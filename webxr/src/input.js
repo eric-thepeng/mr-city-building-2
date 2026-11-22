@@ -319,8 +319,9 @@ export class MouseInput {
     }, { passive: false });
     window.addEventListener('keydown', (e) => {
       if (!this.dragging) return;
-      if (e.key === 'q' || e.key === 'Q') this.dragging.root.rotateY(Math.PI / 12);
-      if (e.key === 'e' || e.key === 'E') this.dragging.root.rotateY(-Math.PI / 12);
+      // Z / X turn the dragged building (Q / E always move the camera)
+      if (e.code === 'KeyZ') this.dragging.root.rotateY(Math.PI / 12);
+      if (e.code === 'KeyX') this.dragging.root.rotateY(-Math.PI / 12);
     });
   }
 

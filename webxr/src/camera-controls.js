@@ -2,7 +2,7 @@
 //   right mouse drag   look around (the camera turns in place)
 //   middle mouse drag  pan
 //   W A S D / arrows   fly forward, left, back, right (Shift = faster)
-//   Q / E              down / up (when no building is being dragged; then they rotate it)
+//   Q / E              down / up
 //   wheel              move forward / back (when no building is being dragged; then it sets the height)
 import * as THREE from 'three';
 
@@ -117,7 +117,6 @@ export class EditorCamera {
     for (const code of this.held) {
       const d = KEYS[code];
       if (!d) continue;
-      if (d[1] && this.busy()) continue; // Q / E rotate the dragged building instead
       tmp.x += d[0];
       tmp.y += d[1];
       tmp.z += d[2];
