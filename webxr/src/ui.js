@@ -14,6 +14,14 @@ export class Label {
   static resolution = 1.5;
   /** Set by main.js. Labels upload through it; without it each label keeps its own canvas. */
   static renderer = null;
+  static all = new Set();
+  /** True on the landing page, where the board is shown without any signs. */
+  static hidden = false;
+
+  static setHidden(hidden) {
+    Label.hidden = hidden;
+    for (const l of Label.all) l.mesh.visible = l.wanted && !!l.texture && !hidden;
+  }
 
   /**
    * Labels are lazy: no GPU texture exists until set() is first called.
@@ -44,6 +52,7 @@ export class Label {
     this.mesh.visible = false;
     this.wanted = true;
     this.text = null;
+    Label.all.add(this);
   }
 
   set(text, { fg, bg } = {}) {
@@ -124,19 +133,20 @@ export class Label {
     this.texture.offset.set(0, 1 - h / ch);
     const worldH = this.height * (h / lineH);
     this.mesh.scale.set(worldH * (w / h), worldH, 1);
-    this.mesh.visible = this.wanted;
+    this.mesh.visible = this.wanted && !Label.hidden;
     return this;
   }
 
   /** Shows the label once it has text; until then it stays hidden. */
   set visible(v) {
     this.wanted = v;
-    this.mesh.visible = v && !!this.texture;
+    this.mesh.visible = v && !!this.texture && !Label.hidden;
   }
 
   get visible() { return this.mesh.visible; }
 
   dispose() {
+    Label.all.delete(this);
     this.texture?.dispose();
     this.texture = null;
     this.canvas = null;

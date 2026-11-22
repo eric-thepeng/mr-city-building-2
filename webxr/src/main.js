@@ -22,6 +22,7 @@ const params = new URLSearchParams(location.search);
 // Snap Specs: see-through display, hands only, and fill rate is the main limit.
 // Snap's docs say to turn antialiasing off there. ?specs forces this profile on.
 const SPECS = params.has('specs') || /Spectacles|Snap ?OS/i.test(navigator.userAgent);
+const HEADSET = SPECS || /OculusBrowser|Quest/i.test(navigator.userAgent);
 // When the runtime has no 'local-floor', the 'local' origin is at the head.
 // Assume this eye height so the world still sits on the floor.
 const ASSUMED_EYE_HEIGHT = 1.55;
@@ -152,6 +153,7 @@ async function main() {
     }
     renderer.xr.setReferenceSpaceType(floor ? 'local-floor' : 'local');
     mode = sessionMode;
+    syncLanding();
     const ar = sessionMode === 'immersive-ar';
     if (sky) sky.visible = !ar;
     scene.fog = ar ? null : fog;
@@ -159,6 +161,7 @@ async function main() {
     mouse.enabled = false;
     session.addEventListener('end', () => {
       mode = null;
+      syncLanding();
       rig.position.y = 0;
       game.placeBoard(DESK_BOARD, 0);
       if (sky) sky.visible = true;
@@ -182,37 +185,55 @@ async function main() {
   };
 
   const setupButton = async (btn, sessionMode) => {
-    const ok = navigator.xr && (await navigator.xr.isSessionSupported(sessionMode).catch(() => false));
-    btn.disabled = !ok;
-    if (!ok) btn.title = 'Not supported in this browser / device';
+    const ok = !!navigator.xr && (await navigator.xr.isSessionSupported(sessionMode).catch(() => false));
+    btn.hidden = !ok;
     btn.addEventListener('click', () => startSession(sessionMode).catch((err) => {
       console.error(err);
       alert(`Could not start ${sessionMode}: ${err.message}`);
     }));
+    return ok;
   };
-  await Promise.all([setupButton($('enter-ar'), 'immersive-ar'), setupButton($('enter-vr'), 'immersive-vr')]);
+  const [hasAR, hasVR] = await Promise.all([setupButton($('enter-ar'), 'immersive-ar'), setupButton($('enter-vr'), 'immersive-vr')]);
+  // The landing page offers only what this device can do, with one main button.
+  const hasXR = hasAR || hasVR;
+  $('enter-vr').classList.toggle('alt', hasAR);
+  const playBtn = $('play-desktop');
+  playBtn.hidden = HEADSET && hasXR;
+  playBtn.classList.toggle('alt', hasXR);
+  playBtn.textContent = hasXR ? 'Play with mouse' : 'Play';
   const note = $('xr-note');
-  note.textContent = '';
-  const noXR = $('enter-ar').disabled && $('enter-vr').disabled;
-  if (!window.isSecureContext) note.textContent = 'WebXR needs HTTPS (or localhost).';
-  else if (noXR) note.textContent = 'This browser has no AR or VR. Open this page on Spectacles or Quest, or play with a mouse.';
-  note.classList.toggle('warn', !!note.textContent);
+  note.textContent = !window.isSecureContext ? 'AR and VR need HTTPS' : hasXR ? '' : 'AR and VR on Spectacles and Quest';
+  note.classList.toggle('warn', !window.isSecureContext);
   if (SPECS) document.body.classList.add('specs');
 
   // landing page <-> desktop play
   let playing = false;
-  // On the landing page, shift the picture so the board sits beside the text
-  // (to the right on wide screens, above it on phones).
+  // On the landing page, pull the picture back and up so the whole board sits above the title.
   const frameView = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    camera.zoom = playing ? 1 : w < h ? 0.5 : 0.78;
     if (playing) camera.clearViewOffset();
-    else if (w > 600) camera.setViewOffset(w, h, -w * 0.2, 0, w, h);
-    else camera.setViewOffset(w, h, 0, h * 0.22, w, h);
+    else camera.setViewOffset(w, h, 0, h * (w > 600 ? 0.15 : 0.16), w, h);
     camera.updateProjectionMatrix();
   };
+  // The landing page shows the bare board under a Mars dusk; signs and the day sky come with play.
+  function syncLanding() {
+    const landing = !playing && !mode;
+    Label.setHidden(landing);
+    if (!sky) return;
+    const u = sky.material.uniforms;
+    // the sky shader writes its colours as they are, so the dusk values are given as displayed
+    const space = landing ? THREE.LinearSRGBColorSpace : THREE.SRGBColorSpace;
+    const [top, horizon, bottom] = landing ? [0x171b30, 0xb9694a, 0x14100f] : [0x4a8fd8, 0xcfe3f5, 0x8a7a6a];
+    u.top.value.setHex(top, space);
+    u.horizon.value.setHex(horizon, space);
+    u.bottom.value.setHex(bottom, space);
+    fog.color.setHex(landing ? 0xc9774d : 0xbfd8f0);
+  }
   const setPlaying = (on) => {
     playing = on;
+    syncLanding();
     document.body.classList.toggle('playing', on);
     controls.autoRotate = !on;
     if (!on) {
@@ -223,6 +244,7 @@ async function main() {
     frameView();
   };
   frameView();
+  syncLanding();
   $('play-desktop').addEventListener('click', () => setPlaying(true));
   $('back').addEventListener('click', () => setPlaying(false));
   $('restart').addEventListener('click', () => game.restart());

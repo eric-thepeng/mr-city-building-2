@@ -3,8 +3,8 @@
 A browser port of the Unity game on `main`, built with [three.js](https://threejs.org) and WebXR.
 **Live: <https://mars.pengguo.net>**
 
-The site opens on a landing page with **Enter AR** and **Enter VR** (and a link to play in the
-browser with a mouse).
+The site opens on a landing page that offers only what the device supports: **Enter AR**, **Enter VR**,
+or **Play** with a mouse.
 
 It targets **Snap Specs** (AR, hands only) and **Meta Quest** (AR passthrough or VR, with hands or
 controllers). It also runs on desktop with a mouse. No build step and no install: it is plain ES modules,
