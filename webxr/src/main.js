@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { AssetLibrary } from './assets.js';
 import { Game } from './game.js';
 import { XRInput, MouseInput } from './input.js';
+import { EditorCamera } from './camera-controls.js';
 import { Label, updateBillboards } from './ui.js';
 import { batchJointPoses } from './xr-perf.js';
 import { mergeExpansion } from './expansion.js';
@@ -101,15 +101,14 @@ async function main() {
   game.start();
 
   // ---------------------------------------------------------------- input
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(0, 0.8, -0.45);
-  controls.enableDamping = true;
-  controls.maxDistance = 6;
-  // behind the landing page the board turns slowly; it stops once you play
+  // Unity Scene view style: right-drag looks around, WASD / arrows fly, wheel moves forward.
+  // Behind the landing page the camera circles the board slowly; that stops once you play.
+  const mouse = new MouseInput(camera, renderer.domElement, game);
+  const controls = new EditorCamera(camera, renderer.domElement, {
+    target: new THREE.Vector3(0, 0.8, -0.45),
+    busy: () => !!mouse.dragging,
+  });
   controls.autoRotate = true;
-  controls.autoRotateSpeed = 0.6;
-  controls.update();
-  const mouse = new MouseInput(camera, renderer.domElement, game, controls);
   const xrInput = new XRInput(renderer, rig, game, { models: !SPECS });
 
   // In-world buttons under the budget sign (inside XR there is no HTML UI).
@@ -215,6 +214,11 @@ async function main() {
     playing = on;
     document.body.classList.toggle('playing', on);
     controls.autoRotate = !on;
+    if (!on) {
+      // back on the landing page: return to the starting view before circling again
+      camera.position.set(0, 1.2, 0.25);
+      camera.lookAt(controls.target);
+    }
     frameView();
   };
   frameView();
@@ -273,8 +277,10 @@ async function main() {
     // Update the XR camera from this frame's head pose before the labels and the
     // budget sign turn towards it (otherwise they use last frame's pose and wobble).
     if (renderer.xr.isPresenting) renderer.xr.updateCamera(camera);
-    if (!mode) controls.update();
-    else xrInput.update(dt);
+    if (!mode) {
+      controls.update(dt);
+      mouse.update();
+    } else xrInput.update(dt);
     game.update(dt);
     for (const o of animated) o.userData.update(t);
     const viewer = renderer.xr.isPresenting ? renderer.xr.getCamera() : camera;

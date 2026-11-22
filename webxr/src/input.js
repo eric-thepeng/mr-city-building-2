@@ -10,6 +10,7 @@ const PINCH_END = 0.04;
 const tmpM = new THREE.Matrix4();
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
+const DOWN = new THREE.Vector3(0, -1, 0);
 const tmpQ = new THREE.Quaternion();
 const tmpBox = new THREE.Box3();
 const tmpP = new THREE.Vector3();
@@ -290,25 +291,30 @@ export class XRInput {
   }
 }
 
+// Left mouse: drag buildings and press in-world buttons. A dragged building snaps onto
+// the ground (its support beams at zero length); the wheel lifts it from there. Wheel down
+// stops at the ground, wheel up has no limit (higher costs more beam).
 export class MouseInput {
-  constructor(camera, dom, game, controls) {
+  constructor(camera, dom, game) {
     this.camera = camera;
     this.dom = dom;
     this.game = game;
-    this.controls = controls;
     this.raycaster = new THREE.Raycaster();
     this.pointer = new THREE.Vector2();
     this.dragging = null;
     this.hovered = null;
-    this.lift = 0.008;
+    this.lift = 0; // game units above the snapped ground position
+    this.probe = new THREE.Raycaster();
+    this.last = null; // last pointer position, to keep a dragged building under it while the camera flies
     this.enabled = true;
     dom.addEventListener('pointerdown', (e) => this.down(e), { capture: true });
     dom.addEventListener('pointermove', (e) => this.move(e));
-    window.addEventListener('pointerup', () => this.up());
+    window.addEventListener('pointerup', (e) => { if (e.button === 0) this.up(); });
     dom.addEventListener('wheel', (e) => {
       if (!this.dragging) return;
       e.preventDefault();
-      this.lift = THREE.MathUtils.clamp(this.lift - e.deltaY * 0.0002, 0.002, 0.4);
+      const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+      this.lift = Math.max(0, this.lift - dy * 0.0002); // one notch = 0.02 game units (1 cm on the board)
       this.move(e);
     }, { passive: false });
     window.addEventListener('keydown', (e) => {
@@ -343,13 +349,14 @@ export class MouseInput {
     b.onHoverEnd();
     this.hovered = null;
     this.dragging = b;
-    this.lift = 0.008;
-    this.controls.enabled = false;
+    this.lift = 0; // snap to the ground
+    b.lift = 0;
     e.stopImmediatePropagation();
   }
 
   move(e) {
     if (!this.enabled) return;
+    this.last = { clientX: e.clientX, clientY: e.clientY };
     this._ray(e);
     const b = this.dragging;
     if (b) {
@@ -361,19 +368,27 @@ export class MouseInput {
       if (ground) {
         // rest the building just above the highest ground under its support beams
         this.game.setWorldPosition(b, ground.point);
-        let top = ground.point.y;
-        const down = new THREE.Vector3(0, -1, 0);
-        const probe = new THREE.Raycaster();
+        // Snap: the highest ground under the support beams, measured the way the beams
+        // measure it (baked heightfield, plus finished buildings and nodes they can stand on).
+        const hf = this.game.assets.heightfield;
+        const solids = this.game.obstacleTargets(b);
+        let top = -Infinity;
         b.root.updateMatrixWorld(true);
-        for (const beam of b.beams) {
-          beam.holder.getWorldPosition(tmpV);
-          probe.set(tmpV.setY(ground.point.y + 1), down);
-          const h = probe.intersectObjects(targets, false)[0];
-          if (h) top = Math.max(top, h.point.y);
+        const feet = b.beams.length ? b.beams.map((beam) => beam.holder) : [b.root];
+        for (const foot of feet) {
+          foot.getWorldPosition(tmpV);
+          board.worldToLocal(tmpV2.copy(tmpV));
+          let h = hf.at(tmpV2.x, tmpV2.z);
+          this.probe.set(tmpV.setY(board.position.y + 100 * k), DOWN);
+          const hit = this.probe.intersectObjects(solids, false)[0];
+          if (hit) h = Math.max(h, (hit.point.y - board.position.y) / k);
+          top = Math.max(top, h);
         }
         // board is only yawed and uniformly scaled, so heights convert directly
         const beamDrop = b.beams.length ? -b.beams[0].holder.position.y : 0;
-        b.root.position.y = (top - board.position.y) / k + beamDrop + this.lift;
+        // +0.001: resting exactly on the ground can read as just below it (float precision)
+        b.root.position.y = top + beamDrop + 0.001 + this.lift;
+        b.lift = this.lift;
       } else {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -b.root.getWorldPosition(tmpV2).y);
         if (this.raycaster.ray.intersectPlane(plane, tmpV)) {
@@ -394,11 +409,16 @@ export class MouseInput {
     }
   }
 
+  /** Called every frame: keeps a dragged building under the cursor while the camera moves. */
+  update() {
+    if (this.dragging && this.last) this.move(this.last);
+  }
+
   up() {
     const b = this.dragging;
     if (!b) return;
     this.dragging = null;
-    this.controls.enabled = true;
+    b.lift = 0;
     b.onRelease();
   }
 }

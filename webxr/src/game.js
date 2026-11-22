@@ -465,13 +465,15 @@ export class Building {
     const money = this.game.money;
     if (!canBuild) {
       this.currentCost = -1;
-      this.nameLabel.set('can not build here', { fg: '#ff5a5a' });
+      // a beam would be longer than this building allows (too high, or over a cliff edge)
+      this.nameLabel.set(`beams too long (max ${+(this.maxBeamLength * BOARD_SCALE * 100).toFixed(1)} cm)`, { fg: '#ff5a5a' });
       this.setDisplayState(false);
     } else {
       this.currentCost = Math.trunc(total * (this.def.beamCost ?? 100)); // money per game unit of beam
       const affordable = this.currentCost <= money.amount;
       this.setDisplayState(affordable);
-      this.nameLabel.set(`cost: ${this.currentCost}`, { fg: affordable ? '#ffffff' : '#ff5a5a' });
+      const lifted = this.lift > 0.001 ? ` · lifted ${+(this.lift * BOARD_SCALE * 100).toFixed(1)} cm` : '';
+      this.nameLabel.set(`cost: ${this.currentCost}${lifted}`, { fg: affordable ? '#ffffff' : '#ff5a5a' });
     }
     this.calculateScoring(false);
   }

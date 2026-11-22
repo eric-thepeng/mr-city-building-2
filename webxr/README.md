@@ -118,7 +118,10 @@ python -m http.server 8123 --directory webxr
 
 Then open <http://localhost:8123>.
 
-- **Desktop:** drag buildings with the mouse. The scroll wheel sets the height, Q/E rotates, and dragging empty space orbits the camera.
+- **Desktop:** left-drag buildings with the mouse. A dragged building snaps onto the ground; wheel up lifts
+  it (no limit, but taller beams cost more), wheel down brings it back to the ground. Q/E rotates it. The
+  camera works like the Unity Scene view (`src/camera-controls.js`): right-drag looks around, W A S D or the
+  arrow keys fly, Q/E go down / up, Shift is faster, the wheel moves forward / back, middle-drag pans.
 - **No headset?** Open <http://localhost:8123/?emulate>. This installs Meta's
   [Immersive Web Emulation Runtime](https://github.com/meta-quest/immersive-web-emulation-runtime),
   an emulated Quest 3, so you can use *Enter VR* / *Enter AR* in a normal browser. Drive it from the
