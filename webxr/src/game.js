@@ -92,6 +92,10 @@ class HandManager {
 // where the hand stood, so it reads as a choice and not as buildings to drag.
 // Milestones unlock a random building pack; its card joins the next choice.
 // Score = every point placements earned, minus the ones they lost; the budget is separate.
+// width of one building on a choice card, in board units (before game.ui)
+const MODEL_SLOT = 0.066;
+const SCORE_CARD_BG = 'rgba(18,30,52,0.96)';
+
 class Progress {
   constructor(game) {
     this.game = game;
@@ -128,29 +132,37 @@ class Progress {
       m.raycast = () => {};
       anchor.add(m);
     }
-    this.title = new Label({ height: 0.013 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false });
+    // the panel stops pointers, so nothing behind it gets hovered or pressed through it
+    this.frameFill.raycast = THREE.Mesh.prototype.raycast;
+    this.frameFill.userData.building = { onHoverStart() {}, onHoverEnd() {}, onStartGrab: () => false };
+    // score tooltip for the small buildings on the cards (the panel is scaled, so undo that)
+    this.tip = new Label({
+      height: (0.0085 / anchor.scale.x) * ui, bg: SCORE_CARD_BG, depthTest: false, renderOrder: 14,
+    });
+    this.tip.visible = false;
+    this.tipOwner = null;
+    this.title = new Label({ height: 0.013 * ui, bg: 'rgba(255,196,0,0.95)', fg: '#1b1b1b', font: 800, billboard: false, depthTest: false, renderOrder: 13 });
     anchor.add(this.title.mesh);
     // a card with small copies of buildings turning on top of it
     const card = (bg) => {
       const c = new Label({ height: 0.0105 * ui, bg, fg: '#ffffff', accent: '#ffe27a', align: 'left', billboard: false });
-      c.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
       c.visible = false;
       const models = new THREE.Group();
       models.visible = false;
       anchor.add(c.mesh, models);
       return { card: c, models };
     };
-    this.notice = card('rgba(18,112,84,0.95)');
-    game.addButton(this.notice.card.mesh, () => this.closeNotice());
+    this.notice = card('rgba(30,42,70,0.96)'); // only the Continue button closes it
     this.continueBtn = new Label({ height: 0.013 * ui, bg: 'rgba(45,108,223,0.95)', font: 800, billboard: false });
     this.continueBtn.mesh.raycast = THREE.Mesh.prototype.raycast;
     this.continueBtn.visible = false;
     anchor.add(this.continueBtn.mesh);
-    game.addButton(this.continueBtn.mesh, () => this.closeNotice());
+    game.addButton(this.continueBtn, () => this.closeNotice());
     this.hands = [0, 1].map(() => {
       const o = card('rgba(28,70,160,0.95)');
       o.preset = null;
-      game.addButton(o.card.mesh, () => { if (o.preset) this.pickHand(o.preset); });
+      o.card.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
+      game.addButton(o.card, () => { if (o.preset) this.pickHand(o.preset); });
       return o;
     });
     // buildings that were in the game before the expansion (their packs add bonuses to them)
@@ -225,70 +237,127 @@ class Progress {
     return keys.filter((k) => !this.base.has(k));
   }
 
-  /** The text on a pack's card: what each new building scores, what it adds to old ones, its hands. */
+  /** A table of what a building scores: what it likes on the left, what it dislikes on the right. */
+  scoreTable(k) {
+    const b = this.game.data.buildingInfo[k];
+    const row = ([o, v]) => [this.name(o), `${v > 0 ? '+' : '\u2212'}${Math.abs(v)}`];
+    const entries = Object.entries(b.scoring);
+    const good = entries.filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).map(row);
+    const bad = entries.filter(([, v]) => v < 0).sort((x, y) => x[1] - y[1]).map(row);
+    if (b.altitude) good.push([`Height per ${this.cm(b.altitude.per)} cm`, `+${b.altitude.points}`]);
+    return good.length || bad.length ? { good, bad } : null;
+  }
+
+  cm(v) { return +(v * BOARD_SCALE * 100).toFixed(1); }
+
+  /** The hover card of a building: name, range, score table, and its special rule. */
+  scoreCard(k) {
+    const b = this.game.data.buildingInfo[k];
+    const blocks = [{ title: this.name(k) }];
+    if (b.detectDistance > 0) blocks.push({ sub: `Range ${this.cm(b.detectDistance)} cm` });
+    const table = this.scoreTable(k);
+    if (table) blocks.push(table);
+    if (b.note) blocks.push({ sub: b.note });
+    return blocks;
+  }
+
+  /** The card of a new pack: each new building's table, what it adds to old ones, its hands. */
   describe(pack) {
     const info = this.game.data.buildingInfo;
-    const name = (k) => this.name(k);
-    const cm = (v) => +(v * BOARD_SCALE * 100).toFixed(1);
     const fresh = this.newBuildings(pack);
-    const lines = [`#NEW PACK: ${pack.displayName.toUpperCase()}`, pack.blurb ?? pack.summary];
+    const blocks = [{ sub: pack.blurb ?? pack.summary }];
     for (const k of fresh) {
       const b = info[k];
-      lines.push(b.detectDistance > 0 ? `#${b.displayName} · range ${cm(b.detectDistance)} cm` : `#${b.displayName}`);
-      if (b.altitude) lines.push(`  +${b.altitude.points} for every ${cm(b.altitude.per)} cm of height`);
-      const entries = Object.entries(b.scoring).sort((x, y) => y[1] - x[1]);
-      const fmt = ([o, v]) => `${name(o)} ${v > 0 ? '+' : '−'}${Math.abs(v)}${b.consumes?.includes(o) ? ' (uses it up)' : ''}`;
-      const good = entries.filter(([, v]) => v > 0).map(fmt);
-      const bad = entries.filter(([, v]) => v < 0).map(fmt);
-      for (let i = 0; i < good.length; i += 2) lines.push(`  ${i ? '' : 'Near: '}${good.slice(i, i + 2).join(', ')}`);
-      if (bad.length) lines.push(`  Crowded: ${bad.join(', ')}`);
-      if (!entries.length && b.note) lines.push(`  ${b.note}`);
+      blocks.push({ heading: b.detectDistance > 0 ? `${this.name(k)} \u00b7 range ${this.cm(b.detectDistance)} cm` : this.name(k) });
+      const table = this.scoreTable(k);
+      if (table) blocks.push(table);
+      if (b.note) blocks.push({ sub: b.note });
     }
     // old buildings that now earn next to the new ones
     const liked = [];
     for (const [k, b] of Object.entries(info)) {
       if (!this.base.has(k)) continue;
-      for (const f of fresh) if ((b.scoring[f] ?? 0) > 0) liked.push(`${name(k)} +${b.scoring[f]} near ${name(f)}`);
+      for (const n of fresh) if ((b.scoring[n] ?? 0) > 0) liked.push([`${this.name(k)} near ${this.name(n)}`, `+${b.scoring[n]}`]);
     }
-    if (liked.length) {
-      lines.push('#Also');
-      for (const l of liked) lines.push(`  ${l}`);
-    }
-    lines.push('#Hands');
-    for (const p of pack.presets) lines.push(`  ${this.handLine(p)}`);
-    lines.push('(tap to continue)');
-    return lines.join('\n');
+    if (liked.length) blocks.push({ heading: 'Also' }, { good: liked, bad: [] });
+    blocks.push({ heading: 'Hands' });
+    for (const p of pack.presets) blocks.push({ text: this.handLine(p) });
+    return blocks;
   }
 
   handLine(preset) {
     return Object.entries(preset.buildings).map(([k, n]) => `${n > 1 ? `${n}× ` : ''}${this.name(k)}`).join(' + ');
   }
 
-  /** Small copies of buildings, turning slowly on top of a card. */
+  /** Small copies of buildings on a card, fixed to it and turned 45 degrees. */
   fillModels(group, keys) {
+    this.tip.mesh.removeFromParent();
+    this.tip.visible = false;
+    this.tipOwner = null;
     for (const c of [...group.children]) c.removeFromParent();
+    const ui = this.game.ui;
     const box = new THREE.Box3();
     const size = new THREE.Vector3();
-    const gap = 0.06 * this.game.ui;
+    const center = new THREE.Vector3();
+    const gap = MODEL_SLOT * ui;
     keys.forEach((k, i) => {
       const m = this.game.assets.instance(`block_${k}`);
-      box.setFromObject(m, true);
-      box.getSize(size);
-      const s = Math.min(1.3, (0.045 * this.game.ui) / Math.max(size.y, 0.001), (0.055 * this.game.ui) / Math.max(size.x, size.z, 0.001));
-      m.scale.setScalar(s);
       m.traverse((o) => { o.raycast = () => {}; }); // only the cards are buttons
+      box.setFromObject(m, true);
+      m.position.sub(box.getCenter(center)); // turn around its own middle
+      // seen from one corner and 45 degrees above (the panel itself faces the player)
+      const turn = new THREE.Group();
+      turn.rotation.set(Math.PI / 4, Math.PI / 4, 0);
+      turn.add(m);
+      turn.updateMatrixWorld(true);
+      // fit what the player actually sees, then stand it on the card
+      box.setFromObject(turn, true);
+      box.getSize(size);
+      box.getCenter(center);
+      const s = Math.min(1.3, (MODEL_SLOT * 0.92 * ui) / Math.max(size.x, 0.001), (0.056 * ui) / Math.max(size.y, 0.001));
+      turn.scale.setScalar(s);
+      turn.position.set(-center.x * s, -box.min.y * s, -center.z * s);
       const holder = new THREE.Group();
-      holder.add(m);
-      m.position.y = -box.min.y * s; // stand on the card
       holder.position.x = (i - (keys.length - 1) / 2) * gap;
+      holder.add(turn);
+      // an invisible box: pointing at it shows what this building scores
+      const top = size.y * s;
+      const hit = new THREE.Mesh(this.game.boxGeometry, this.game.colliderMaterial);
+      hit.scale.set(gap * 0.95, top, 0.06 * ui);
+      hit.position.y = top / 2;
+      hit.userData.building = {
+        onHoverStart: () => this.showTip(k, holder, top),
+        onHoverEnd: () => { if (this.tipOwner === holder) this.tip.visible = false; },
+        onStartGrab: () => false,
+      };
+      holder.userData.hit = hit;
+      holder.add(hit);
       group.add(holder);
     });
+  }
+
+  showTip(k, holder, top) {
+    const t = this.tip;
+    t.setCard(this.scoreCard(k));
+    t.mesh.position.set(0, top + 0.004 * this.game.ui + t.h / 2, 0.012 * this.game.ui);
+    holder.add(t.mesh);
+    this.tipOwner = holder;
+    t.visible = true;
+  }
+
+  /** Adds what a pointer can hover on the panel: the frame and the buildings on the cards. */
+  addHoverTargets(out) {
+    if (!this.anchor.visible) return;
+    out.push(this.frameFill);
+    for (const o of [this.notice, ...this.hands]) {
+      if (o.models.visible) for (const h of o.models.children) out.push(h.userData.hit);
+    }
   }
 
   showNotice(pack) {
     const n = this.notice;
     n.pack = pack;
-    n.card.set(this.describe(pack));
+    n.card.setCard(this.describe(pack));
     this.fillModels(n.models, this.newBuildings(pack));
     n.card.visible = true;
     n.models.visible = true;
@@ -385,25 +454,26 @@ class Progress {
     const gap = 0.012 * ui;
     const pad = 0.01 * ui;
     // each card gets a slot at least as wide as the row of models standing on it
-    const slot = (o) => Math.max(o.card.mesh.scale.x, o.models.children.length * 0.06 * ui);
+    const slot = (o) => Math.max(o.card.w, o.models.children.length * MODEL_SLOT * ui);
     const total = items.reduce((a, o) => a + slot(o), 0) + gap * (items.length - 1);
     let x = -total / 2;
     let top = 0;
     // the Continue button under the new pack's card
     const btn = this.continueBtn;
-    const btnH = btn.wanted ? btn.mesh.scale.y + 0.008 * ui : 0;
+    const btnH = btn.wanted ? btn.h + 0.008 * ui : 0;
     if (btn.wanted) btn.mesh.position.set(0, -btnH / 2, 0);
     for (const o of items) {
       const w = slot(o);
-      const h = o.card.mesh.scale.y;
+      const h = o.card.h;
       o.card.mesh.position.set(x + w / 2, h / 2, 0);
-      o.models.position.set(x + w / 2, h + 0.004 * ui, 0);
+      // in front of the frame, so a turned building is never cut by it
+      o.models.position.set(x + w / 2, h + 0.006 * ui, 0.04 * ui);
       x += w + gap;
       top = Math.max(top, h);
     }
     this.title.set(this.notice.pack ? `New pack unlocked: ${this.notice.pack.displayName}` : 'Pick your next hand');
     this.title.visible = true;
-    const titleY = top + 0.06 * ui + this.title.mesh.scale.y / 2;
+    const titleY = top + 0.08 * ui + this.title.mesh.scale.y / 2;
     this.title.mesh.position.set(0, titleY, 0);
     // the frame around everything
     const w = Math.max(total, this.title.mesh.scale.x) + pad * 2;
@@ -446,10 +516,6 @@ class Progress {
     if (this.messageUntil && this.game.time >= this.messageUntil) {
       this.messageUntil = 0;
       this.refreshMessage();
-    }
-    if (!this.anchor.visible) return;
-    for (const o of [this.notice, ...this.hands]) {
-      if (o.models.visible) for (const h of o.models.children) h.rotation.y += dt * 0.8;
     }
   }
 
@@ -621,16 +687,10 @@ export class Building {
 
   onHoverStart() {
     if (this.isResource) return this.showNodeTip();
+    if (this.state === State.COMPLETE) return this.showTip(`#${this.game.progress.name(this.key)}`);
     if (this.state !== State.WAITING) return;
-    const lines = [this.game.progress.name(this.key)];
-    for (const [k, v] of Object.entries(this.info.scoring)) {
-      lines.push(`${this.game.progress.name(k)} ${v > 0 ? '+' : ''}${v}`);
-    }
-    const alt = this.info.altitude;
-    if (alt) lines.push(`Height +${alt.points} per ${+(alt.per * BOARD_SCALE * 100).toFixed(1)} cm`);
-    if (this.info.note) lines.push(this.info.note);
     const panel = this.game.infoPanel;
-    panel.set(lines.join('\n'));
+    panel.setCard(this.game.progress.scoreCard(this.key));
     // bottom edge just above the name label, so the panel grows upwards
     panel.mesh.position.set(0, this.top + 0.02 * this.game.ui + panel.mesh.scale.y / 2, 0);
     this.root.add(panel.mesh);
@@ -653,20 +713,22 @@ export class Building {
       const locked = pool.has(k) ? '' : ' (not unlocked yet)';
       lines.push(`  ${game.progress.name(k)} +${b.scoring[this.key]}${used}${locked}`);
     }
-    const panel = game.nodePanel;
-    panel.set(lines.join('\n'));
-    panel.mesh.position.set(0, this.localBox.max.y + 0.01 * game.ui + panel.mesh.scale.y / 2, 0);
+    this.showTip(lines.join('\n'));
+  }
+
+  /** The tooltip above a resource node or a finished building. */
+  showTip(text) {
+    const panel = this.game.nodePanel;
+    panel.set(text);
+    panel.mesh.position.set(0, this.localBox.max.y + 0.01 * this.game.ui + panel.mesh.scale.y / 2, 0);
     this.root.add(panel.mesh);
     panel.visible = true;
   }
 
   onHoverEnd() {
-    if (this.isResource) {
-      if (this.game.nodePanel.mesh.parent === this.root) this.game.nodePanel.visible = false;
-      return;
+    for (const panel of [this.game.infoPanel, this.game.nodePanel]) {
+      if (panel.mesh.parent === this.root) panel.visible = false;
     }
-    const panel = this.game.infoPanel;
-    if (panel.mesh.parent === this.root) panel.visible = false;
   }
 
   // --- per-frame -------------------------------------------------------
@@ -924,7 +986,7 @@ export class Game {
     this.gasGeometry = new THREE.SphereGeometry(1, 8, 6);
     // every gas puff is in step, so they all share one material
     this.gasMaterial = new THREE.MeshBasicMaterial({ color: 0x9cf5c4, transparent: true, opacity: 0.55, depthWrite: false });
-    this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', renderOrder: 12 });
+    this.infoPanel = new Label({ height: 0.0085 * this.ui, bg: SCORE_CARD_BG, depthTest: false, renderOrder: 14 });
     this.infoPanel.visible = false;
     this.nodePanel = new Label({
       height: 0.0085 * this.ui, bg: 'rgba(255,255,255,0.92)', fg: '#1b2030', accent: '#1d5fd1', align: 'left', renderOrder: 12,
@@ -933,7 +995,7 @@ export class Game {
     this.over = false; // budget fell below 0
 
     this.ringGeometry = new THREE.RingGeometry(0.6, 1, 24).rotateX(-Math.PI / 2);
-    this.buttons = []; // in-world buttons { mesh, onPress }, pressed by hands, controllers or the mouse
+    this.buttons = []; // in-world buttons, pressed by hands, controllers or the mouse (see addButton)
     this.time = 0;
     this.group = this.board; // buildings live on the board
     this._grab = [];
@@ -996,8 +1058,47 @@ export class Game {
     this.hand.dealRandom();
   }
 
-  addButton(mesh, onPress) {
-    this.buttons.push({ mesh, onPress });
+  addButton(label, onPress) {
+    this.buttons.push({ label, mesh: label.mesh, onPress, hover: new Set(), down: false, k: 1 });
+  }
+
+  /** `owner` (the mouse or one hand) now points at `btn`, or at no button. */
+  hoverButton(owner, btn) {
+    for (const b of this.buttons) if (b !== btn) b.hover.delete(owner);
+    btn?.hover.add(owner);
+  }
+
+  /** Buttons grow and brighten under a pointer, and shrink and darken while pressed. */
+  updateButtons(dt) {
+    for (const b of this.buttons) {
+      if (!b.mesh.visible) {
+        b.down = false;
+        b.hover.clear();
+        if (b.k !== 1) {
+          b.k = 1;
+          b.label.setPop(1);
+          b.mesh.material.color.setScalar(1);
+        }
+        continue;
+      }
+      const on = b.hover.size > 0;
+      const goal = b.down ? 0.94 : on ? 1.07 : 1;
+      if (b.k !== goal) {
+        b.k += (goal - b.k) * Math.min(1, dt * 22);
+        if (Math.abs(goal - b.k) < 0.002) b.k = goal;
+        b.label.setPop(b.k);
+      }
+      b.mesh.material.color.setScalar(b.down ? 0.78 : on ? 1.35 : 1);
+    }
+  }
+
+  /** What a press can land on: visible buttons, and the choice panel that stops presses behind it. */
+  buttonTargets() {
+    const out = this._btn ??= [];
+    out.length = 0;
+    for (const b of this.buttons) if (b.mesh.visible) out.push(b.mesh);
+    if (this.progress.anchor.visible) out.push(this.progress.frameFill);
+    return out;
   }
 
   /**
@@ -1166,13 +1267,14 @@ export class Game {
     b.root.position.copy(this.board.worldToLocal(tmpV.copy(worldPos)));
   }
 
-  /** What a pointer can hover: hand buildings, plus resource nodes (they show a tooltip). */
+  /** What a pointer can hover: hand buildings, plus nodes, finished buildings and the choice panel (tooltips). */
   hoverables() {
     const out = this._hover ??= [];
     out.length = 0;
     for (const b of this.buildings) {
-      if (b.grabbable || (b.isResource && !b.depleted)) out.push(b.collider);
+      if (b.grabbable || ((b.isResource || b.state === State.COMPLETE) && !b.depleted)) out.push(b.collider);
     }
+    this.progress.addHoverTargets(out);
     return out;
   }
 
@@ -1220,6 +1322,7 @@ export class Game {
     for (const c of this.clouds) c.regular.position.y = Math.sin(this.time * 0.8 + c.phase) * 0.005;
     for (const b of this.buildings) b.update(dt);
     this.progress.update(dt);
+    this.updateButtons(dt);
     for (let i = this.tweens.length - 1; i >= 0; i--) {
       const t = this.tweens[i];
       if (t.cancelled) { this.tweens.splice(i, 1); continue; }

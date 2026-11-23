@@ -22,6 +22,7 @@ const params = new URLSearchParams(location.search);
 // Snap Specs: see-through display, hands only, and fill rate is the main limit.
 // Snap's docs say to turn antialiasing off there. ?specs forces this profile on.
 const SPECS = params.has('specs') || /Spectacles|Snap ?OS/i.test(navigator.userAgent);
+const HEADSET = SPECS || /OculusBrowser|Quest/i.test(navigator.userAgent);
 // When the runtime has no 'local-floor', the 'local' origin is at the head.
 // Assume this eye height so the world still sits on the floor.
 const ASSUMED_EYE_HEIGHT = 1.55;
@@ -77,9 +78,9 @@ async function main() {
   // ---------------------------------------------------------------- sky
   // Only for VR / desktop. Specs is AR-only, so it gets neither sky nor fog: switching
   // fog off when AR starts would compile every shader a second time.
-  const sky = SPECS ? null : makeSky();
+  const sky = SPECS ? null : makeSky(sun.position.clone().normalize());
   if (sky) scene.add(sky);
-  const fog = SPECS ? null : new THREE.Fog(0xbfd8f0, 2.5, 6);
+  const fog = SPECS ? null : new THREE.Fog(0xe0a078, 2.5, 6);
   scene.fog = fog;
 
   // ---------------------------------------------------------------- world
@@ -110,6 +111,7 @@ async function main() {
     busy: () => !!mouse.dragging,
   });
   controls.autoRotate = true;
+  mouse.cameraBusy = () => !!controls.mode;
   const xrInput = new XRInput(renderer, rig, game, { models: !SPECS });
 
   // In-world buttons under the budget sign (inside XR there is no HTML UI).
@@ -120,7 +122,7 @@ async function main() {
     btn.mesh.position.set(x, -0.05 * game.ui, 0);
     btn.mesh.raycast = THREE.Mesh.prototype.raycast; // labels ignore rays by default
     game.money.anchor.add(btn.mesh);
-    xrInput.addButton(btn.mesh, onPress);
+    xrInput.addButton(btn, onPress);
   };
   addButton('New game', -0.07 * game.ui, () => game.restart());
   addButton('Recenter', 0.07 * game.ui, () => { needsPlacement = true; });
@@ -152,6 +154,7 @@ async function main() {
     }
     renderer.xr.setReferenceSpaceType(floor ? 'local-floor' : 'local');
     mode = sessionMode;
+    syncLanding();
     const ar = sessionMode === 'immersive-ar';
     if (sky) sky.visible = !ar;
     scene.fog = ar ? null : fog;
@@ -159,6 +162,7 @@ async function main() {
     mouse.enabled = false;
     session.addEventListener('end', () => {
       mode = null;
+      syncLanding();
       rig.position.y = 0;
       game.placeBoard(DESK_BOARD, 0);
       if (sky) sky.visible = true;
@@ -182,37 +186,45 @@ async function main() {
   };
 
   const setupButton = async (btn, sessionMode) => {
-    const ok = navigator.xr && (await navigator.xr.isSessionSupported(sessionMode).catch(() => false));
-    btn.disabled = !ok;
-    if (!ok) btn.title = 'Not supported in this browser / device';
+    const ok = !!navigator.xr && (await navigator.xr.isSessionSupported(sessionMode).catch(() => false));
+    btn.hidden = !ok;
     btn.addEventListener('click', () => startSession(sessionMode).catch((err) => {
       console.error(err);
       alert(`Could not start ${sessionMode}: ${err.message}`);
     }));
+    return ok;
   };
-  await Promise.all([setupButton($('enter-ar'), 'immersive-ar'), setupButton($('enter-vr'), 'immersive-vr')]);
+  const [hasAR, hasVR] = await Promise.all([setupButton($('enter-ar'), 'immersive-ar'), setupButton($('enter-vr'), 'immersive-vr')]);
+  // The landing page offers only what this device can do, with one main button.
+  const hasXR = hasAR || hasVR;
+  $('enter-vr').classList.toggle('alt', hasAR);
+  const playBtn = $('play-desktop');
+  playBtn.hidden = HEADSET && hasXR;
+  playBtn.classList.toggle('alt', hasXR);
+  playBtn.textContent = hasXR ? 'Play with mouse' : 'Play';
   const note = $('xr-note');
-  note.textContent = '';
-  const noXR = $('enter-ar').disabled && $('enter-vr').disabled;
-  if (!window.isSecureContext) note.textContent = 'WebXR needs HTTPS (or localhost).';
-  else if (noXR) note.textContent = 'This browser has no AR or VR. Open this page on Spectacles or Quest, or play with a mouse.';
-  note.classList.toggle('warn', !!note.textContent);
+  note.textContent = !window.isSecureContext ? 'AR and VR need HTTPS' : hasXR ? '' : 'AR and VR on Spectacles and Quest';
+  note.classList.toggle('warn', !window.isSecureContext);
   if (SPECS) document.body.classList.add('specs');
 
   // landing page <-> desktop play
   let playing = false;
-  // On the landing page, shift the picture so the board sits beside the text
-  // (to the right on wide screens, above it on phones).
+  // On the landing page, pull the picture back and up so the whole board sits above the title.
   const frameView = () => {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    camera.zoom = playing ? 1 : w < h ? 0.5 : 0.78;
     if (playing) camera.clearViewOffset();
-    else if (w > 600) camera.setViewOffset(w, h, -w * 0.2, 0, w, h);
-    else camera.setViewOffset(w, h, 0, h * 0.22, w, h);
+    else camera.setViewOffset(w, h, 0, h * (w > 600 ? 0.15 : 0.16), w, h);
     camera.updateProjectionMatrix();
   };
+  // The landing page shows the bare board; the signs come with play.
+  function syncLanding() {
+    Label.setHidden(!playing && !mode);
+  }
   const setPlaying = (on) => {
     playing = on;
+    syncLanding();
     document.body.classList.toggle('playing', on);
     controls.autoRotate = !on;
     if (!on) {
@@ -223,6 +235,7 @@ async function main() {
     frameView();
   };
   frameView();
+  syncLanding();
   $('play-desktop').addEventListener('click', () => setPlaying(true));
   $('back').addEventListener('click', () => setPlaying(false));
   $('restart').addEventListener('click', () => game.restart());
@@ -312,21 +325,49 @@ async function main() {
   });
 }
 
-function makeSky() {
+/**
+ * A Mars evening, drawn in one cheap shader (no textures): a peach horizon under a deep indigo
+ * sky, a glow around the sun, two ranges of distant mesas and a dark plain below.
+ */
+function makeSky(sunDir) {
   const geo = new THREE.SphereGeometry(80, 32, 16);
   const mat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     depthWrite: false,
     fog: false,
-    uniforms: {
-      top: { value: new THREE.Color(0x4a8fd8) },
-      horizon: { value: new THREE.Color(0xcfe3f5) },
-      bottom: { value: new THREE.Color(0x8a7a6a) },
-    },
-    vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
-    fragmentShader: `uniform vec3 top; uniform vec3 horizon; uniform vec3 bottom; varying vec3 vP;
-      void main(){ float h = vP.y; vec3 c = h > 0.0 ? mix(horizon, top, pow(h, 0.6)) : mix(horizon, bottom, pow(-h, 0.5));
-      gl_FragColor = vec4(c, 1.0); }`,
+    uniforms: { sunDir: { value: sunDir } },
+    vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `precision mediump float;
+      uniform vec3 sunDir; varying vec3 vP;
+      const vec3 ZENITH = vec3(0.125, 0.145, 0.300);
+      const vec3 MID = vec3(0.520, 0.350, 0.390);
+      const vec3 HORIZON = vec3(0.930, 0.640, 0.450);
+      const vec3 FAR_RIDGE = vec3(0.680, 0.420, 0.330);
+      const vec3 NEAR_RIDGE = vec3(0.420, 0.245, 0.200);
+      const vec3 PLAIN = vec3(0.285, 0.170, 0.140);
+      float below(float y, float edge) { return 1.0 - smoothstep(edge - 0.0015, edge + 0.0015, y); }
+      void main(){
+        vec3 d = normalize(vP);
+        float up = max(d.y, 0.0);
+        vec3 c = mix(HORIZON, MID, smoothstep(0.0, 0.22, up));
+        c = mix(c, ZENITH, smoothstep(0.12, 0.80, up));
+        float s = max(dot(d, sunDir), 0.0);
+        c += vec3(1.0, 0.72, 0.50) * (0.26 * pow(s, 12.0) + 0.50 * pow(s, 120.0));
+        c = mix(c, vec3(1.0, 0.95, 0.86), smoothstep(0.9994, 0.9997, s));
+        float a = atan(d.z, d.x);
+        float far = 0.050 + 0.022 * sin(a * 3.0 + 1.0) + 0.012 * sin(a * 7.0 + 2.4) + 0.006 * sin(a * 17.0 + 0.6);
+        float near = 0.022 + 0.014 * sin(a * 5.0 + 4.0) + 0.007 * sin(a * 11.0 + 1.7) + 0.003 * sin(a * 29.0);
+        c = mix(c, FAR_RIDGE, below(d.y, far));
+        c = mix(c, NEAR_RIDGE, below(d.y, near));
+        if (d.y < 0.0) {
+          // the plain, with soft dunes that fade out towards the horizon
+          vec2 g = d.xz / max(-d.y, 0.06);
+          float dune = sin(g.x * 2.1 + 1.6 * sin(g.y * 1.3)) * sin(g.y * 1.7 + 1.2 * sin(g.x * 0.9));
+          c = mix(NEAR_RIDGE, PLAIN, smoothstep(0.0, 0.40, -d.y));
+          c *= 1.0 + 0.14 * dune * smoothstep(0.03, 0.18, -d.y);
+        }
+        gl_FragColor = vec4(c, 1.0);
+      }`,
   });
   const sky = new THREE.Mesh(geo, mat);
   sky.raycast = () => {};

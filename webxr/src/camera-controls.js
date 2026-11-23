@@ -4,6 +4,7 @@
 //   W A S D / arrows   fly forward, left, back, right (Shift = faster)
 //   Q / E              down / up
 //   wheel              move forward / back (when no building is being dragged; then it sets the height)
+// All of it also works while the left button is carrying a building.
 import * as THREE from 'three';
 
 const KEYS = {
@@ -42,15 +43,24 @@ export class EditorCamera {
     this.syncAngles();
 
     dom.addEventListener('contextmenu', (e) => e.preventDefault());
+    // A second mouse button pressed during a drag sends no pointerdown or pointerup, only a
+    // pointermove with new `buttons`, so the mode is read from `buttons` every time.
+    const syncMode = (e) => {
+      const want = !this.active ? null : e.buttons & 2 ? 'look' : e.buttons & 4 ? 'pan' : null;
+      if (want === this.mode) return;
+      if (want && !this.mode) {
+        this.syncAngles();
+        this.dom.setPointerCapture(e.pointerId);
+      }
+      this.mode = want;
+      this.dom.style.cursor = want === 'look' ? 'none' : want === 'pan' ? 'move' : '';
+    };
     dom.addEventListener('pointerdown', (e) => {
-      if (!this.active || (e.button !== 2 && e.button !== 1)) return;
-      e.preventDefault();
-      this.syncAngles();
-      this.mode = e.button === 2 ? 'look' : 'pan';
-      this.dom.setPointerCapture(e.pointerId);
-      this.dom.style.cursor = this.mode === 'look' ? 'none' : 'move';
+      if (e.button === 1 || e.button === 2) e.preventDefault();
+      syncMode(e);
     });
     dom.addEventListener('pointermove', (e) => {
+      syncMode(e);
       if (!this.mode) return;
       if (this.mode === 'look') {
         this.yaw -= e.movementX * this.lookSpeed;
@@ -62,12 +72,7 @@ export class EditorCamera {
         this.camera.position.add(tmp);
       }
     });
-    const end = (e) => {
-      if (!this.mode || (e.button !== 2 && e.button !== 1)) return;
-      this.mode = null;
-      this.dom.style.cursor = '';
-    };
-    dom.addEventListener('pointerup', end);
+    dom.addEventListener('pointerup', syncMode);
     dom.addEventListener('pointercancel', () => { this.mode = null; this.dom.style.cursor = ''; });
     dom.addEventListener('wheel', (e) => {
       if (!this.active || this.busy()) return;

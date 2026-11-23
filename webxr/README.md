@@ -3,8 +3,8 @@
 A browser port of the Unity game on `main`, built with [three.js](https://threejs.org) and WebXR.
 **Live: <https://mars.pengguo.net>**
 
-The site opens on a landing page with **Enter AR** and **Enter VR** (and a link to play in the
-browser with a mouse).
+The site opens on a landing page that offers only what the device supports: **Enter AR**, **Enter VR**,
+or **Play** with a mouse.
 
 It targets **Snap Specs** (AR, hands only) and **Meta Quest** (AR passthrough or VR, with hands or
 controllers). It also runs on desktop with a mouse. No build step and no install: it is plain ES modules,
@@ -65,14 +65,14 @@ are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by 
 ### Hands, milestones and packs
 
 The first hand of a game is random. When a hand is used up, a framed **choice panel** stands in the hand
-row in front of the player with **two hand cards** (the buildings turning on top, and what is in the hand);
-pinch, point at or click one to deal it. The budget sign shows the score and how many points are left until
+row in front of the player with **two hand cards** (the buildings shown at 45°, and what is in the hand);
+pinch, point at or click a card to deal it. Hovering a building shows what it scores: what it likes on the left in green, what it dislikes on the right in red. The budget sign shows the score and how many points are left until
 the next unlock. A building can't be placed where its box cuts into a finished building ("too close to …").
 
 **Score** counts every point placements earned or lost; it is separate from the budget. At score
 milestones (20, 50, 90, 140, 200, then every 80) a **random** locked building pack joins the deck (the budget sign
 says so), and at the next pick a green card in the choice panel shows what it adds: what each new building scores, the bonuses it gives existing buildings,
-and the pack's hands (text generated from the data in `Progress.describe`; tap the card to close it). The
+and the pack's hands (text generated from the data in `Progress.describe`; only its Continue button closes it). The
 new pack's first hand is one of the two choices at the next pick. Once all three packs (Highlander,
 Skywatch, Cliffside) are in, a milestone pays +30 budget instead. Add **`?unlock`** to the address to
 start with every pack.
@@ -137,6 +137,7 @@ Then open <http://localhost:8123>.
   it (no limit, but taller beams cost more), wheel down brings it back to the ground. Z/X rotates it. The
   camera works like the Unity Scene view (`src/camera-controls.js`): right-drag looks around, W A S D or the
   arrow keys fly, Q/E go down / up, Shift is faster, the wheel moves forward / back, middle-drag pans.
+  All of it also works while carrying a building, except the wheel, which then sets its height.
 - **No headset?** Open <http://localhost:8123/?emulate>. This installs Meta's
   [Immersive Web Emulation Runtime](https://github.com/meta-quest/immersive-web-emulation-runtime),
   an emulated Quest 3, so you can use *Enter VR* / *Enter AR* in a normal browser. Drive it from the
@@ -195,8 +196,8 @@ To change the sandbox, edit `SANDBOX` at the top of `tools/bake.js` and bake aga
 
 - **Resource nodes score.** In Unity, `BuildingBase.Start()` sets `canScore = false` on every
   node, including ore and gas resource nodes. That is why the commit says "working except resource
-  scoring". Here they score as the ScriptableObjects describe, for example Gas Extractor next to gas +6.
+  scoring". Here they score as the ScriptableObjects describe, for example Gas Extractor next to gas +4.
 - **Grabbed buildings stay upright.** They follow the controller's yaw only, so the support beams stay vertical.
 - **Ray grab:** on controllers, the thumbstick pushes the building away or pulls it in.
 - MK Toon shading is approximated with `MeshToonMaterial`. The gas VFX Graph is a simple puff effect.
-- AR mode (`immersive-ar`) uses the same layout over the real world. VR mode adds a gradient sky.
+- AR mode (`immersive-ar`) uses the same layout over the real world. VR mode adds a procedural Mars evening sky.
