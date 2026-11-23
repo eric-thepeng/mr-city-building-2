@@ -125,6 +125,96 @@ export function ringMesh(inner: number, segments: number): RenderMesh {
   return b.getMesh()
 }
 
+/** Unit box centred on the origin. */
+export function boxMesh(): RenderMesh {
+  const b = newBuilder()
+  const v: number[] = []
+  const idx: number[] = []
+  const faces = [
+    [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+    [[-1, 0, 0], [0, 0, 1], [0, 1, 0]],
+    [[0, 1, 0], [0, 0, 1], [1, 0, 0]],
+    [[0, -1, 0], [1, 0, 0], [0, 0, 1]],
+    [[0, 0, 1], [1, 0, 0], [0, 1, 0]],
+    [[0, 0, -1], [0, 1, 0], [1, 0, 0]],
+  ]
+  faces.forEach(([n, a, c], f) => {
+    for (const [s, t] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+      v.push((n[0] + a[0] * s + c[0] * t) / 2, (n[1] + a[1] * s + c[1] * t) / 2, (n[2] + a[2] * s + c[2] * t) / 2, n[0], n[1], n[2])
+    }
+    const k = f * 4
+    idx.push(k, k + 1, k + 2, k, k + 2, k + 3)
+  })
+  b.appendVerticesInterleaved(v)
+  b.appendIndices(idx)
+  b.updateMesh()
+  return b.getMesh()
+}
+
+function pushLine(v: number[], idx: number[], a: number[], b: number[], w: number): void {
+  const dx = b[0] - a[0]
+  const dz = b[2] - a[2]
+  const len = Math.hypot(dx, dz) || 1
+  const px = (-dz / len) * w
+  const pz = (dx / len) * w
+  const k = v.length / 6
+  v.push(a[0] - px, a[1], a[2] - pz, 0, 1, 0)
+  v.push(a[0] + px, a[1], a[2] + pz, 0, 1, 0)
+  v.push(b[0] + px, b[1], b[2] + pz, 0, 1, 0)
+  v.push(b[0] - px, b[1], b[2] - pz, 0, 1, 0)
+  idx.push(k, k + 1, k + 2, k, k + 2, k + 3)
+}
+
+/** A rectangular outline on the XZ plane, centred on the origin. */
+export function outlineMesh(width: number, depth: number, lineWidth: number): RenderMesh {
+  const b = newBuilder()
+  const v: number[] = []
+  const idx: number[] = []
+  const x = width / 2
+  const z = depth / 2
+  const c = [[-x, 0, -z], [x, 0, -z], [x, 0, z], [-x, 0, z]]
+  for (let i = 0; i < 4; i++) pushLine(v, idx, c[i], c[(i + 1) % 4], lineWidth)
+  b.appendVerticesInterleaved(v)
+  b.appendIndices(idx)
+  b.updateMesh()
+  return b.getMesh()
+}
+
+/**
+ * The lines of a scanned surface's grid: either those on the flat base (`objects` false) or those
+ * touching a real object (`objects` true). Null when there are none.
+ */
+export function roomGridMesh(
+  g: {x0: number; z0: number; step: number; nx: number; nz: number; heights: number[]; blocked: boolean[]},
+  objectHeight: number,
+  objects: boolean,
+): RenderMesh | null {
+  const LIFT = 0.005
+  const WIDTH = 0.0025
+  const v: number[] = []
+  const idx: number[] = []
+  const point = (i: number, j: number) => [g.x0 + i * g.step, g.heights[j * g.nx + i] + LIFT, g.z0 + j * g.step]
+  const edge = (i: number, j: number, i2: number, j2: number) => {
+    const a = j * g.nx + i
+    const c = j2 * g.nx + i2
+    if (g.blocked[a] || g.blocked[c]) return
+    const high = g.heights[a] >= objectHeight || g.heights[c] >= objectHeight
+    if (high === objects) pushLine(v, idx, point(i, j), point(i2, j2), WIDTH)
+  }
+  for (let j = 0; j < g.nz; j++) {
+    for (let i = 0; i < g.nx; i++) {
+      if (i + 1 < g.nx) edge(i, j, i + 1, j)
+      if (j + 1 < g.nz) edge(i, j, i, j + 1)
+    }
+  }
+  if (!v.length) return null
+  const b = newBuilder()
+  b.appendVerticesInterleaved(v)
+  b.appendIndices(idx)
+  b.updateMesh()
+  return b.getMesh()
+}
+
 // An icosahedron: 12 vertices per puff keeps the per-frame rewrite cheap.
 const T = (1 + Math.sqrt(5)) / 2
 const ICO_V = [

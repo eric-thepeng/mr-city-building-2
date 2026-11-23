@@ -171,9 +171,12 @@ export class Game {
     })
     this.boardTop = maxH
     this.groundBase = minH + 0.02
-    this.spawnCenter = new vec3(0, nearH + 0.08, data.board.depth / 2 + 0.12)
+    // (on a real board the row is just above the surface, whatever stands near the front)
+    this.spawnCenter = new vec3(0, data.board.real ? 0.1 : nearH + 0.08, data.board.depth / 2 + 0.12)
     // budget sign floating over the far edge of the sandbox
-    this.signPosition = new vec3(0, maxH + 0.32, -data.board.depth / 2 - 0.02)
+    // (a tall real object must not send it out of view)
+    const signBase = data.board.real ? Math.min(maxH, 0.3) : maxH
+    this.signPosition = new vec3(0, signBase + 0.32, -data.board.depth / 2 - 0.02)
 
     this.infoCard = new ScoreCard(board, CM_PER_UNIT, {material: models.mats.cardBg, lineCm: 0.85, color: rgba("#121e34", 0.96), billboard: true, order: 30}, "InfoCard")
     this.nodePanel = new WorldLabel(board, CM_PER_UNIT, {height: 0.85, fg: rgba("#1b2030"), bg: rgba("#ffffff", 0.92), align: "left", renderOrder: 12}, "NodePanel")
@@ -182,12 +185,14 @@ export class Game {
     this.progress = new Progress(this)
     this.hand = new HandManager(this)
 
-    // terrain
-    const terrain = models.instance("terrain", board)
-    models.forEachVisual(terrain, (v) => {
-      // flat-shaded faces and rock bands on the walls, as in WebXR
-      if (v.mainMaterial === models.mats.regular.Terrain) v.mesh = buildTerrainMesh(v.mesh)
-    })
+    // terrain (on a scanned board the real surface is the terrain)
+    if (!data.board.real) {
+      const terrain = models.instance("terrain", board)
+      models.forEachVisual(terrain, (v) => {
+        // flat-shaded faces and rock bands on the walls, as in WebXR
+        if (v.mainMaterial === models.mats.regular.Terrain) v.mesh = buildTerrainMesh(v.mesh)
+      })
+    }
     // resource nodes, crystal veins and ice clouds
     for (const res of data.board.resources) this.addBuilding(new Building(this, res.type, {resource: res}))
     models.mergeStatic(

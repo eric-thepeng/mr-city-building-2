@@ -16,6 +16,19 @@ appears about 75 cm ahead and 45 cm below your eyes, so look down in Preview. Wi
 and drag a building in the hand row (SIK's mouse interactor), point at resource nodes for tooltips,
 and click the cards and buttons. On Specs: pinch a building up close or point and pinch from afar.
 
+### Two maps
+
+On Specs the game opens with a choice:
+
+- **Mars Map**: the built-in sandbox, as in the WebXR version.
+- **Real Space**: look at a table or the floor, press *Scan Here*, and look around for a few seconds.
+  The surface becomes the board. Real objects are terrain: buildings can't go through them, and support
+  beams can stand on them. Ore appears at their foot, crystal on top, gas in the open and ice clouds
+  above. The scan runs once per launch and is not saved; *New game* keeps the same scan.
+
+Lens Studio Preview has no depth, so it starts directly on the Mars map. To try the whole flow there,
+turn on **Preview Map Menu**: Real Space then scans a test table with three objects.
+
 The Inspector of the `MarsHomecoming` object has the settings:
 
 | Setting | Default | |
@@ -25,6 +38,7 @@ The Inspector of the `MarsHomecoming` object has the settings:
 | Debug Colliders | off | draws the grab and hover boxes |
 | Start With Choice | off | debug: start at the first milestone (pack card, then the hand choice) |
 | First Hand | empty | debug: deal this hand preset first, e.g. `Skywatch_01` |
+| Preview Map Menu | off | Preview only: show the Mars Map / Real Space menu (Specs always show it) |
 | Sounds | `GeneratedSFX/Mars*.wav` | build, fail, coin, milestone, cloud |
 
 ## How it maps to the WebXR version
@@ -60,6 +74,18 @@ card's tables, card buildings fixed at 45° with a score tip, and a name tip on 
 Not ported, because they only apply to the desktop web page: the landing page, the Mars sky and fog,
 and moving the camera with the mouse while carrying. The choice panel's gold border is also not
 reproduced. Button hover and press states come from UI Kit.
+
+### Real Space (Specs only, no WebXR counterpart)
+
+| Script | Job |
+|---|---|
+| `MarsMapFlow.ts` | The steps before a game: choose a map, aim, scan, retry or fall back to Mars |
+| `MarsMapUI.ts` | The panel for those steps |
+| `MarsRoomScan.ts` | Casts rays straight down through the World Mesh on a 4 cm grid, keeps the median of each point's last 5 hits, finds the base surface and fills small holes. Also holds the Preview test room |
+| `MarsRoomLayout.ts` | Places the same 51 resource nodes according to the scanned shape |
+
+The scan produces a normal `BoardLayout`, so beams, costs and scoring run unchanged. Only a real board
+adds the footprint check (`Heightfield.footprint`), hides the Mars terrain and removes Recenter.
 
 ### What is the same art, and what was rebuilt
 
@@ -133,8 +159,13 @@ on card buildings, the hover card on waiting buildings, resource tooltips, and t
 panel blocks the pointer from what is behind it. The name tip on a finished building and that it
 can't be picked up again were checked with a building placed by the simulated hand.
 
-Not yet checked: game over (budget below 0) in Preview, and anything on Specs glasses. The first
-on-device run is the next step (Lens Studio → *Preview Lens* on a paired Specs).
+Real Space was checked in Preview against the test room, with simulated hands: the menu, Back, scan,
+a failed scan and Try Again, the Mars fallback, a building blocked by an object, one placed on top of
+an object, one outside the mapped area, and New game.
+
+Not yet checked: game over (budget below 0) in Preview, and anything on Specs glasses. That includes
+**the real World Mesh**: its accuracy, how long a scan takes and the cost of the rays are unknown until
+the first on-device run (Lens Studio → *Preview Lens* on a paired Specs).
 
 CLAD's preview tools installed `AiPreviewAgentInspect`, `AiPreviewAgentInteract`, `Leaf` and
 `Bitmoji 3D` into `Packages/` and an `AiPreviewAgent Handler` object into the scene. They are only

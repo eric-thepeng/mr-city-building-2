@@ -29,6 +29,10 @@ const cm = (units: number) => +(units * CM_PER_UNIT).toFixed(1)
 
 const RED = rgba("#ff5a5a")
 const WHITE = rgba("#ffffff")
+/** Real boards: how far a building's box may dip into a real surface (scan noise, 1.75 cm). */
+const ROOM_TOLERANCE = 0.035
+/** Real boards: how much of a resource node's height sinks into the surface. */
+const NODE_SINK = 0.12
 
 interface Beam {
   anchor: vec3
@@ -135,6 +139,12 @@ export class Building {
     }
     this.localBox = box
     this.top = box[4]
+    // on a scanned surface, p.y is the ground: stand the rock on it
+    if (resource && !resource.air && game.data.board.real) {
+      const placed = placedBox(box, this.rootT.getLocalPosition(), this.rootT.getLocalRotation())
+      const p = this.rootT.getLocalPosition()
+      this.rootT.setLocalPosition(new vec3(p.x, p.y + resource.p[1] - placed[1] - (placed[4] - placed[1]) * NODE_SINK, p.z))
+    }
 
     // support beams
     for (const a of this.def.beams) {
@@ -319,6 +329,9 @@ export class Building {
     this.blockedBy = null
     this.overlaps = this.findOverlap()
     if (this.overlaps) canBuild = false
+    const hf = this.game.heightfield
+    const room = hf.blocked ? hf.footprint(placedBox(this.localBox, this.position, this.rootT.getLocalRotation()), ROOM_TOLERANCE) : null
+    if (room) canBuild = false
     for (const beam of this.beams) {
       const len = this.calculateSupportBeam(beam)
       if (len === -1) canBuild = false
@@ -332,9 +345,13 @@ export class Building {
       label?.set(
         this.overlaps
           ? `too close to ${displayName(this.game.data, this.overlaps.key)}`
-          : this.blockedBy
-            ? `can't stand on ${displayName(this.game.data, this.blockedBy.key)}`
-            : `beams too long (max ${cm(this.maxBeamLength)} cm)`,
+          : room === "object"
+            ? "blocked by a real object"
+            : room === "unmapped"
+              ? "outside the mapped area"
+              : this.blockedBy
+                ? `can't stand on ${displayName(this.game.data, this.blockedBy.key)}`
+                : `beams too long (max ${cm(this.maxBeamLength)} cm)`,
         RED,
       )
       this.setDisplayState(false)

@@ -63,10 +63,21 @@ export interface CardBlock {
 }
 
 export interface BoardLayout {
+  /** made from a scan of the player's real surroundings (no Mars terrain is drawn) */
+  real?: boolean
   width: number
   depth: number
   resources: ResourceDef[]
-  heightfield: {x0: number; z0: number; step: number; nx: number; nz: number; heights: number[]}
+  heightfield: {
+    x0: number
+    z0: number
+    step: number
+    nx: number
+    nz: number
+    heights: number[]
+    /** real boards: grid points with no usable surface */
+    blocked?: boolean[]
+  }
 }
 
 export interface GameData {
@@ -131,6 +142,7 @@ export class Heightfield {
   readonly nx: number
   readonly nz: number
   readonly h: number[]
+  readonly blocked: boolean[] | null
 
   constructor(hf: BoardLayout["heightfield"]) {
     this.x0 = hf.x0
@@ -139,6 +151,32 @@ export class Heightfield {
     this.nx = hf.nx
     this.nz = hf.nz
     this.h = hf.heights
+    this.blocked = hf.blocked ?? null
+  }
+
+  /**
+   * Real boards: what stops a box [minX,minY,minZ,maxX,maxY,maxZ] from standing here. "object" = its
+   * underside cuts into a real object by more than `tolerance`; "unmapped" = part of it is over
+   * no usable surface. Null when it is free (and always on the Mars board).
+   */
+  footprint(box: number[], tolerance: number): "object" | "unmapped" | null {
+    if (!this.blocked) return null
+    const cols = Math.max(1, Math.ceil((box[3] - box[0]) / (this.step / 2)))
+    const rows = Math.max(1, Math.ceil((box[5] - box[2]) / (this.step / 2)))
+    let hitsObject = false
+    for (let r = 0; r <= rows; r++) {
+      for (let c = 0; c <= cols; c++) {
+        const x = box[0] + ((box[3] - box[0]) * c) / cols
+        const z = box[2] + ((box[5] - box[2]) * r) / rows
+        const ground = this.at(x, z)
+        if (ground === -Infinity) return "unmapped"
+        const i = Math.round((x - this.x0) / this.step)
+        const j = Math.round((z - this.z0) / this.step)
+        if (this.blocked[j * this.nx + i]) return "unmapped"
+        if (ground > box[1] + tolerance) hitsObject = true
+      }
+    }
+    return hitsObject ? "object" : null
   }
 
   /** Height at (x, z), or -Infinity off the board. Matches the baked triangles. */

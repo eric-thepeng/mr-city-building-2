@@ -10,7 +10,8 @@ import {MarsSignUI} from "./MarsSignUI"
 import {ChoiceView, MarsChoiceUI} from "./MarsChoiceUI"
 import {Game, GameView, Sfx} from "./MarsGame"
 import {CM_PER_UNIT} from "./MarsBuilding"
-import {loadGameData} from "./MarsData"
+import {GameData, loadGameData} from "./MarsData"
+import {MapFlow} from "./MarsMapFlow"
 import {MaterialSet, ModelLibrary} from "./MarsModels"
 import {cylinderMesh, ringMesh, sphereMesh} from "./MarsMeshes"
 import {WorldLabel} from "./MarsLabelsUI"
@@ -81,6 +82,10 @@ export class MarsMain extends BaseScriptComponent implements GameView {
   @input
   @hint("Debug: deal this hand preset first (e.g. Skywatch_01); empty = a random hand, as in the WebXR version")
   firstHand: string = ""
+
+  @input
+  @hint("Preview: show the Mars Map / Real Space menu (Real Space scans a test room). Off = go straight to the Mars map. Specs always show the menu.")
+  previewMapMenu: boolean = false
   @ui.group_end
 
   @ui.separator
@@ -112,6 +117,7 @@ export class MarsMain extends BaseScriptComponent implements GameView {
   @ui.group_end
 
   private game: Game | null = null
+  private mapFlow: MapFlow | null = null
   private sounds: Partial<Record<Sfx, AudioComponent>> = {}
   private needsPlacement = true
   private frames = 0
@@ -136,6 +142,35 @@ export class MarsMain extends BaseScriptComponent implements GameView {
     const data = loadGameData(this.gameData, this.expansionData, this.boardData)
     const mats = loadMaterials()
     const models = new ModelLibrary(this.modelLibrary, mats)
+    const inPreview = global.deviceInfoSystem.isEditor()
+    if (inPreview && !this.previewMapMenu) {
+      this.startGame(data, mats, models)
+      return
+    }
+    // first the map: nothing of the game shows until it is chosen
+    this.signUI.getSceneObject().enabled = false
+    this.needsPlacement = false
+    this.mapFlow = new MapFlow({
+      root: this.root,
+      board: this.board,
+      camera: this.camera,
+      lineMaterial: mats.detect,
+      baked: data.board,
+      inPreview,
+      boardDistance: this.boardDistance,
+      boardBelowEyes: this.boardBelowEyes,
+      onDone: (board) => {
+        this.mapFlow = null
+        this.signUI.getSceneObject().enabled = true
+        if (board) data.board = board
+        this.needsPlacement = !board // a real board already stands on its surface
+        this.startGame(data, mats, models)
+        this.signUI.setCanRecenter(!board)
+      },
+    })
+  }
+
+  private startGame(data: GameData, mats: MaterialSet, models: ModelLibrary): void {
     const meshes = {beam: cylinderMesh(0.003, 6), sphere: sphereMesh(24, 12), ring: ringMesh(0.6, 24)}
     const game = new Game(data, models, meshes, this.board, this.root, this)
     game.debugColliders = this.debugColliders
@@ -159,6 +194,10 @@ export class MarsMain extends BaseScriptComponent implements GameView {
   }
 
   private update(): void {
+    if (this.mapFlow) {
+      this.mapFlow.update(Math.min(getDeltaTime(), 0.1))
+      return
+    }
     const game = this.game
     if (!game) return
     game.update(Math.min(getDeltaTime(), 0.1))
