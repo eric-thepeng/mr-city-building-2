@@ -93,12 +93,16 @@
 |---|---|
 | LivingPod | Factory −4,GasExtractor −3,Excavator −2,CliffDrill −2 |
 | Farm | Factory −3,GasExtractor −3 |
-| Factory | LivingPod −3,Farm −2 |
-| GasExtractor | LivingPod −2,Farm −2 |
+| Factory | LivingPod −2,Farm −1 |
+| GasExtractor | LivingPod −1,Farm −1 |
 | Excavator | LivingPod −2 |
 | Bar | Factory +2(工人下班喝酒,Bar 是两个区之间的缓冲) |
 
-Warehouse 保持万能邻居,自然成为两个区之间的另一种缓冲。沙盘只有约 61 × 56 cm,Factory 的探测半径是 20 cm,所以分区压力会很明显。
+Warehouse 保持万能邻居,自然成为两个区之间的另一种缓冲。
+
+**数值是怎么协调的(2026-11-22)**:按探测半径定每个邻居扣多少。Factory 的半径 20 cm,一次能盖住沙盘的 37%;GasExtractor 17.5 cm,盖住 28%;它们放下时会同时看到很多居住建筑,所以每个只扣 1 到 2 分,一片 4 个 LivingPod 的住宅区正好抵掉一次好的工厂放置(+8 到 +11)。LivingPod 和 Farm 的半径只有 7.5 cm(沙盘的 5%),只有贴着工业建筑才会触发,所以每个扣 3 到 4 分,大约等于它们两个好邻居的收入。这组数值已写进设计稿评分表的黄色格,还没在游戏里实测。
+
+一个后果:在 7.5 到 20 cm 这一圈里,先放工厂、后放住宅不扣分,反过来才扣。这和 Islanders 一样,顺序本身是策略。
 
 ### 7b. SpacePort 当地标
 
