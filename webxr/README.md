@@ -196,7 +196,7 @@ To change the sandbox, edit `SANDBOX` at the top of `tools/bake.js` and bake aga
 
 - **Resource nodes score.** In Unity, `BuildingBase.Start()` sets `canScore = false` on every
   node, including ore and gas resource nodes. That is why the commit says "working except resource
-  scoring". Here they score as the ScriptableObjects describe, for example Gas Extractor next to gas +6.
+  scoring". Here they score as the ScriptableObjects describe, for example Gas Extractor next to gas +4.
 - **Grabbed buildings stay upright.** They follow the controller's yaw only, so the support beams stay vertical.
 - **Ray grab:** on controllers, the thumbstick pushes the building away or pulls it in.
 - MK Toon shading is approximated with `MeshToonMaterial`. The gas VFX Graph is a simple puff effect.
