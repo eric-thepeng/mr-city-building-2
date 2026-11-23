@@ -93,6 +93,7 @@ export class Building {
   private badge: WorldLabel
   private detect: SceneObject | null = null
   private grab: SceneObject | null = null
+  private manip: InteractableManipulation | null = null
   private hoverObj: SceneObject | null = null
   private initialPos: vec3
   private initialRot: quat
@@ -224,6 +225,7 @@ export class Building {
     interactable.onHoverEnter.add(() => this.setHovered(true))
     interactable.onHoverExit.add(() => this.setHovered(false))
     this.grab = o
+    this.manip = manip
   }
 
   /** Resource nodes: pointing at them shows what they are and who earns next to them. */
@@ -246,8 +248,15 @@ export class Building {
   /** Keeps grab / hover targets in step with the state (finished, tweening, game over, used-up cloud). */
   syncTargets(): void {
     if (this.grab) {
-      const want = this.grabbable || this.state === State.ONGOING
+      // finished buildings stay hoverable (they show their name) but can't be picked up
+      const carry = this.grabbable || this.state === State.ONGOING
+      const want = carry || this.state === State.COMPLETE
       if (this.grab.enabled !== want) this.grab.enabled = want
+      if (this.manip && this.manip.enabled !== carry) {
+        this.manip.setCanTranslate(carry)
+        this.manip.setCanRotate(carry)
+        this.manip.enabled = carry
+      }
     }
     if (this.hoverObj) {
       const want = !this.depleted
@@ -293,6 +302,7 @@ export class Building {
 
   onHoverStart(): void {
     if (this.isResource) return this.game.showNodeTip(this)
+    if (this.state === State.COMPLETE) return this.game.showFinishedTip(this)
     if (this.state !== State.WAITING) return
     this.game.showBuildingTip(this)
   }

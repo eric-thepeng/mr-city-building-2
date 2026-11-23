@@ -13,6 +13,7 @@ import {GasPuffs} from "./MarsMeshes"
 import {buildTerrainMesh} from "./MarsTerrain"
 import {ChoiceState, Progress} from "./MarsProgress"
 import {WorldLabel, rgba} from "./MarsLabelsUI"
+import {ScoreCard} from "./MarsScoreCardUI"
 
 export interface Tween {
   duration: number
@@ -141,7 +142,7 @@ export class Game {
   private clouds: Building[] = []
   private reforms: Reform[] = []
   private gas: GasPuffs | null = null
-  private infoPanel: WorldLabel
+  private infoCard: ScoreCard
   private nodePanel: WorldLabel
   private tipOwner: Building | null = null
   private grabbing = 0
@@ -174,7 +175,7 @@ export class Game {
     // budget sign floating over the far edge of the sandbox
     this.signPosition = new vec3(0, maxH + 0.32, -data.board.depth / 2 - 0.02)
 
-    this.infoPanel = new WorldLabel(board, CM_PER_UNIT, {height: 0.85, fg: rgba("#1b2030"), bg: rgba("#ffffff", 0.92), renderOrder: 12}, "InfoPanel")
+    this.infoCard = new ScoreCard(board, CM_PER_UNIT, {material: models.mats.cardBg, lineCm: 0.85, color: rgba("#121e34", 0.96), billboard: true, order: 30}, "InfoCard")
     this.nodePanel = new WorldLabel(board, CM_PER_UNIT, {height: 0.85, fg: rgba("#1b2030"), bg: rgba("#ffffff", 0.92), align: "left", renderOrder: 12}, "NodePanel")
 
     this.money = new MoneyManager(this, data.startingMoney)
@@ -286,18 +287,22 @@ export class Game {
   }
 
   // --- tooltips ----------------------------------------------------------------
-  /** A waiting hand building: what it scores next to what. */
+  /** A waiting hand building: what it likes (left, green) and dislikes (right, red). */
   showBuildingTip(b: Building): void {
     if (this.grabbing) return
-    const lines = [displayName(this.data, b.key)]
-    for (const k of Object.keys(b.info.scoring)) {
-      const v = b.info.scoring[k]
-      lines.push(`${displayName(this.data, k)} ${v > 0 ? "+" : ""}${v}`)
-    }
-    const alt = b.info.altitude
-    if (alt) lines.push(`Height +${alt.points} per ${+(alt.per * CM_PER_UNIT).toFixed(1)} cm`)
-    if (b.info.note) lines.push(b.info.note)
-    this.showTip(this.infoPanel, b, lines.join("\n"), b.top + 0.04)
+    this.hideTip(null)
+    const card = this.infoCard
+    card.setBlocks(this.progress.scoreCard(b.key))
+    // bottom edge just above the name label, so the card grows upwards
+    card.setLocalPosition(b.position.add(new vec3(0, b.top + 0.04 + card.h / 2 / CM_PER_UNIT, 0)))
+    card.visible = true
+    this.tipOwner = b
+  }
+
+  /** A finished building: just its name. */
+  showFinishedTip(b: Building): void {
+    if (this.grabbing) return
+    this.showTip(this.nodePanel, b, `#${displayName(this.data, b.key)}`, b.top + 0.02)
   }
 
   /** A resource node: what it is and which buildings earn next to it. */
@@ -327,13 +332,14 @@ export class Game {
     const half = (panel.lineCount * 0.85 + 0.4) / 2 / CM_PER_UNIT
     panel.setLocalPosition(b.position.add(new vec3(0, bottom + half, 0)))
     panel.visible = true
+    panel.centerBlock()
     this.tipOwner = b
   }
 
   /** Hides the tooltip (only if it belongs to `b`, or always when b is null). */
   hideTip(b: Building | null): void {
     if (b && this.tipOwner !== b) return
-    this.infoPanel.visible = false
+    this.infoCard.visible = false
     this.nodePanel.visible = false
     this.tipOwner = null
   }

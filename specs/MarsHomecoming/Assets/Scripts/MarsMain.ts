@@ -148,6 +148,7 @@ export class MarsMain extends BaseScriptComponent implements GameView {
       const object = models.instance(`block_${key}`, parent)
       return {object, box: models.localBox(object, parent)}
     })
+    this.choiceUI.setScoreCards(mats.cardBg, (key) => game.progress.scoreCard(key))
     this.signUI.onNewGame.add(() => this.game?.restart())
     this.signUI.onRecenter.add(() => (this.needsPlacement = true))
     this.choiceUI.onPickHand.add((i) => this.game?.progress.pickHand(i))
@@ -283,6 +284,7 @@ function loadMaterials(): MaterialSet {
       Glass: requireAsset("../Materials/MH_Glass_Error.mat") as Material,
       Ore: requireAsset("../Materials/MH_Ore_Error.mat") as Material,
     },
+    cardBg: requireAsset("../Materials/MH_CardBg.mat") as Material,
     beam: requireAsset("../Materials/MH_Beam.mat") as Material,
     beamError: requireAsset("../Materials/MH_Beam_Error.mat") as Material,
     detect: requireAsset("../Materials/MH_Detect.mat") as Material,

@@ -29,7 +29,8 @@ const DEFAULT_BG = new vec4(20 / 255, 24 / 255, 38 / 255, 0.85)
 const WHITE = new vec4(1, 1, 1, 1)
 
 export class WorldLabel {
-  static billboards: WorldLabel[] = []
+  /** Everything that turns to the camera each frame (labels and hover cards). */
+  static billboards: {object: SceneObject}[] = []
   readonly object: SceneObject
   readonly text: Text
   billboard: boolean
@@ -106,6 +107,26 @@ export class WorldLabel {
 
   setParent(parent: SceneObject): void {
     if (this.object.getParent() !== parent) this.object.setParent(parent)
+  }
+
+  /** Left-aligned text starts at a fixed x: shifts the block so it is centred on the object. */
+  centerBlock(): void {
+    // getBoundingBox does not work on rich text: measure the same words as plain text
+    const t = this.text
+    const rich = t.text
+    let w = 0
+    t.enableRichText = false
+    t.text = rich.replace(/<\/?b>/g, "")
+    try {
+      w = t.getBoundingBox().getSize().x
+    } catch {
+      w = 0
+    }
+    t.text = rich
+    t.enableRichText = true
+    if (!(w > 0)) return
+    const r = t.layoutRect
+    t.layoutRect = Rect.create(-w / 2, w / 2, r.bottom, r.top)
   }
 
   /** Lines of text currently shown (for stacking a tooltip above an object). */

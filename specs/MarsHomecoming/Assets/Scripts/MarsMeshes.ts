@@ -13,6 +13,46 @@ function newBuilder(): MeshBuilder {
   return b
 }
 
+/** A rectangle for panelMesh: centre, size and corner radius in the panel's units. */
+export interface PanelRect {
+  x: number
+  y: number
+  w: number
+  h: number
+  r: number
+}
+
+/** Flat rounded rectangles facing +Z, in one mesh (card backgrounds, rules and dividers). */
+export function panelMesh(rects: PanelRect[]): RenderMesh {
+  const b = newBuilder()
+  const v: number[] = []
+  const idx: number[] = []
+  const SEG = 5
+  for (const q of rects) {
+    const r = Math.min(q.r, q.w / 2, q.h / 2)
+    const base = v.length / 6
+    v.push(q.x, q.y, 0, 0, 0, 1)
+    const corners = [
+      [q.x + q.w / 2 - r, q.y + q.h / 2 - r, 0],
+      [q.x - q.w / 2 + r, q.y + q.h / 2 - r, 1],
+      [q.x - q.w / 2 + r, q.y - q.h / 2 + r, 2],
+      [q.x + q.w / 2 - r, q.y - q.h / 2 + r, 3],
+    ]
+    for (const [cx, cy, n] of corners) {
+      for (let s = 0; s <= SEG; s++) {
+        const a = ((n + s / SEG) * Math.PI) / 2
+        v.push(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0, 0, 0, 1)
+      }
+    }
+    const ring = 4 * (SEG + 1)
+    for (let i = 0; i < ring; i++) idx.push(base, base + 1 + i, base + 1 + ((i + 1) % ring))
+  }
+  b.appendVerticesInterleaved(v)
+  b.appendIndices(idx)
+  b.updateMesh()
+  return b.getMesh()
+}
+
 /** Unit-height cylinder centred on the origin (y from -0.5 to 0.5). */
 export function cylinderMesh(radius: number, segments: number): RenderMesh {
   const b = newBuilder()

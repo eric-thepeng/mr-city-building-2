@@ -48,6 +48,20 @@ export interface ResourceDef {
   q: number[]
 }
 
+/**
+ * One block of an info card (port of the blocks of Label.setCard in webxr/src/ui.js): a title,
+ * a muted line, a heading, a plain line, or a table of [name, value] rows, what a building
+ * likes on the left and what it dislikes on the right.
+ */
+export interface CardBlock {
+  title?: string
+  sub?: string
+  heading?: string
+  text?: string
+  good?: [string, string][]
+  bad?: [string, string][]
+}
+
 export interface BoardLayout {
   width: number
   depth: number

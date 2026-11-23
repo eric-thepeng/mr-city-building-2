@@ -7,12 +7,14 @@
 // Must not: build UI itself.
 
 import type {Game} from "./MarsGame"
-import {GameData, HandPreset, Pack, displayName} from "./MarsData"
+import {CardBlock, GameData, HandPreset, Pack, displayName} from "./MarsData"
 import {CM_PER_UNIT} from "./MarsBuilding"
 
 export interface ChoiceCard {
   text: string
-  /** building keys shown as small turning models on top of the card */
+  /** a formatted card (the new pack's); replaces `text` */
+  blocks?: CardBlock[]
+  /** building keys shown as small models on top of the card */
   models: string[]
   isNew?: boolean
 }
@@ -120,39 +122,52 @@ export class Progress {
     return keys.filter((k) => !this.base.has(k))
   }
 
-  /** The text on a pack's card: what each new building scores, what it adds to old ones, its hands. */
-  describe(pack: Pack): string {
+  /** A table of what a building scores: what it likes on the left, what it dislikes on the right. */
+  private scoreTable(k: string): CardBlock | null {
+    const b = this.data.buildingInfo[k]
+    const row = ([o, v]: [string, number]): [string, string] => [this.name(o), `${v > 0 ? "+" : "\u2212"}${Math.abs(v)}`]
+    const entries = Object.keys(b.scoring).map((o) => [o, b.scoring[o]] as [string, number])
+    const good = entries.filter(([, v]) => v > 0).sort((x, y) => y[1] - x[1]).map(row)
+    const bad = entries.filter(([, v]) => v < 0).sort((x, y) => x[1] - y[1]).map(row)
+    if (b.altitude) good.push([`Height per ${cm(b.altitude.per)} cm`, `+${b.altitude.points}`])
+    return good.length || bad.length ? {good, bad} : null
+  }
+
+  /** The hover card of a building: name, range, score table, and its special rule. */
+  scoreCard(k: string): CardBlock[] {
+    const b = this.data.buildingInfo[k]
+    const blocks: CardBlock[] = [{title: this.name(k)}]
+    if (b.detectDistance > 0) blocks.push({sub: `Range ${cm(b.detectDistance)} cm`})
+    const table = this.scoreTable(k)
+    if (table) blocks.push(table)
+    if (b.note) blocks.push({sub: b.note})
+    return blocks
+  }
+
+  /** The card of a new pack: each new building's table, what it adds to old ones, its hands. */
+  describe(pack: Pack): CardBlock[] {
     const info = this.data.buildingInfo
     const fresh = this.newBuildings(pack)
-    const lines = [`#NEW PACK: ${pack.displayName.toUpperCase()}`, pack.blurb ?? pack.summary ?? ""]
+    const blocks: CardBlock[] = [{sub: pack.blurb ?? pack.summary ?? ""}]
     for (const k of fresh) {
       const b = info[k]
-      lines.push(b.detectDistance > 0 ? `#${b.displayName} · range ${cm(b.detectDistance)} cm` : `#${b.displayName}`)
-      if (b.altitude) lines.push(`  +${b.altitude.points} for every ${cm(b.altitude.per)} cm of height`)
-      const entries = Object.keys(b.scoring)
-        .map((o) => [o, b.scoring[o]] as [string, number])
-        .sort((x, y) => y[1] - x[1])
-      const fmt = ([o, v]: [string, number]) =>
-        `${this.name(o)} ${v > 0 ? "+" : "−"}${Math.abs(v)}${b.consumes?.includes(o) ? " (uses it up)" : ""}`
-      const good = entries.filter(([, v]) => v > 0).map(fmt)
-      const bad = entries.filter(([, v]) => v < 0).map(fmt)
-      for (let i = 0; i < good.length; i += 2) lines.push(`  ${i ? "" : "Near: "}${good.slice(i, i + 2).join(", ")}`)
-      if (bad.length) lines.push(`  Crowded: ${bad.join(", ")}`)
-      if (!entries.length && b.note) lines.push(`  ${b.note}`)
+      blocks.push({heading: b.detectDistance > 0 ? `${this.name(k)} \u00b7 range ${cm(b.detectDistance)} cm` : this.name(k)})
+      const table = this.scoreTable(k)
+      if (table) blocks.push(table)
+      if (b.note) blocks.push({sub: b.note})
     }
     // old buildings that now earn next to the new ones
-    const liked: string[] = []
+    const liked: [string, string][] = []
     for (const k of Object.keys(info)) {
       if (!this.base.has(k)) continue
-      for (const f of fresh) if ((info[k].scoring[f] ?? 0) > 0) liked.push(`${this.name(k)} +${info[k].scoring[f]} near ${this.name(f)}`)
+      for (const n of fresh) {
+        if ((info[k].scoring[n] ?? 0) > 0) liked.push([`${this.name(k)} near ${this.name(n)}`, `+${info[k].scoring[n]}`])
+      }
     }
-    if (liked.length) {
-      lines.push("#Also")
-      for (const l of liked) lines.push(`  ${l}`)
-    }
-    lines.push("#Hands")
-    for (const p of pack.presets) lines.push(`  ${this.handLine(p)}`)
-    return lines.join("\n")
+    if (liked.length) blocks.push({heading: "Also"}, {good: liked, bad: []})
+    blocks.push({heading: "Hands"})
+    for (const p of pack.presets) blocks.push({text: this.handLine(p)})
+    return blocks
   }
 
   handLine(preset: HandPreset): string {
@@ -200,7 +215,7 @@ export class Progress {
     const notice = this.notice
     this.game.view.showChoice({
       title: notice ? `New pack unlocked: ${notice.displayName}` : "Pick your next hand",
-      notice: notice ? {text: this.describe(notice), models: this.newBuildings(notice)} : null,
+      notice: notice ? {text: "", blocks: this.describe(notice), models: this.newBuildings(notice)} : null,
       hands: notice ? [] : this.handCards,
       showContinue: !!notice && this.awaitingHands,
     })

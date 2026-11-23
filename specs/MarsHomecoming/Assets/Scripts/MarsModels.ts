@@ -42,6 +42,8 @@ const MATERIAL_KEYS: Record<string, string> = {
 export interface MaterialSet {
   regular: Record<string, Material>
   error: Record<string, Material>
+  /** unlit, blended, no depth test: the background of info cards */
+  cardBg: Material
   beam: Material
   beamError: Material
   detect: Material

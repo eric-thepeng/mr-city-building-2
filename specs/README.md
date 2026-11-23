@@ -47,12 +47,19 @@ inside the board are in the same game units (Unity metres); the `Board` object i
 | `input.js` `XRInput` (pinch near / ray far, yaw-only carry) | SIK `Interactable` + `InteractableManipulation` (rotation axis Y, no scaling) on each hand building; `Interactable` hover on resource nodes |
 | `input.js` `MouseInput` | SIK's mouse interactor in Preview |
 | `ui.js` `Label` (canvas labels) | `MarsLabelsUI.ts` `WorldLabel` (Lens Text with a background, turned to the camera) |
+| `ui.js` `Label.setCard` (two-sided score cards) | `MarsScoreCardUI.ts` `ScoreCard`, drawn from the `CardBlock` lists that `MarsProgress.ts` makes |
 | Budget sign labels + in-world buttons | `MarsSignUI.ts` (UI Kit `Frame`, `Button`s) |
-| Choice panel (cards, pack card, Continue) | `MarsChoiceUI.ts` (UI Kit `Frame`, card `Button`s, `RoundedRectangle`, Flex layout) |
+| Choice panel (cards, pack card, Continue, 45° building models with score tips) | `MarsChoiceUI.ts` (UI Kit `Frame`, card `Button`s, Flex layout, `ScoreCard`) |
 | `makeAudio` (WebAudio tones) | `Assets/GeneratedSFX/Mars*.wav`, made by `tools/gen-sfx.js` with the same notes |
 | `data/game-data.json`, `expansion.json`, `board.json`, `world.glb`, `textures/` | `Assets/Data`, `Assets/Models`, `Assets/Textures` (copied by `tools/sync-data.ps1`; the two atlases are stored flipped, see below) |
 
 `UIKitHelpers.ts` is CLAD's UI Kit 4.0 helper, copied unchanged.
+
+The UI and interaction follow `webxr-main` up to commit `4ac362ed`: two-sided hover cards, the pack
+card's tables, card buildings fixed at 45° with a score tip, and a name tip on finished buildings.
+Not ported, because they only apply to the desktop web page: the landing page, the Mars sky and fog,
+and moving the camera with the mouse while carrying. The choice panel's gold border is also not
+reproduced. Button hover and press states come from UI Kit.
 
 ### What is the same art, and what was rebuilt
 
@@ -108,7 +115,6 @@ see-through on Specs).
 - **Beams on resource nodes** stand on the node's bounding box instead of its exact rock surface.
 - **Mouse in Preview** drags in SIK's camera plane; there is no wheel lift or Z/X rotation. On Specs,
   carrying is yaw-only through SIK, as in WebXR.
-- **The new pack card** closes with its Continue button only (WebXR also closed it on a tap on the card).
 - The name label of a carried building shows how high its beams lift it ("lifted 1.2 cm") in XR as
   well; WebXR showed that only for mouse lifting.
 
@@ -119,7 +125,13 @@ carrying and placing buildings, cost and beam labels, badges, scoring and flying
 budget, "beams too long", the hand choice and dealing, the milestone pack card and Continue, the
 Sky Platform (`standOn`) with a Wind Turbine on top (cloud + height score), the Weather Station
 using up an ice cloud (ghost with countdown), resource tooltips, New game and Recenter.
-All 12 buildings were also compared side by side with the live WebXR version.
+The Factory and the Weather Station were compared side by side with the live WebXR version. The
+other buildings use the same meshes and atlases but were not compared one by one.
+
+Checked in Preview with the real mouse: the pack card and Continue, picking a hand, the score tip
+on card buildings, the hover card on waiting buildings, resource tooltips, and that an open choice
+panel blocks the pointer from what is behind it. The name tip on a finished building and that it
+can't be picked up again were checked with a building placed by the simulated hand.
 
 Not yet checked: game over (budget below 0) in Preview, and anything on Specs glasses. The first
 on-device run is the next step (Lens Studio → *Preview Lens* on a paired Specs).

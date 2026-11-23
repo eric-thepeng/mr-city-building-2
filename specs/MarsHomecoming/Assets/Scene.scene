@@ -4621,16 +4621,14 @@
   Enabled: true
   ScriptAsset: !<reference> 26c1cf1b-b0df-4dba-b52a-2cde2fd07266
   ScriptInputsDefault:
-    spinSpeed: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       lineHeight: 0.750000
       handCardWidth: 10.500000
-      packCardWidth: !<float> 19.000000
-      modelHeight: 2.400000
-      spinSpeed: 0.800000
+      modelHeight: 3.600000
   ScriptTypes:
     "":
       {}
