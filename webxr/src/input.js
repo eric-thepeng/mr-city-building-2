@@ -306,8 +306,9 @@ export class XRInput {
 }
 
 // Left mouse: drag buildings and press in-world buttons. A dragged building snaps onto
-// the ground (its support beams at zero length); the wheel lifts it from there. Wheel down
-// stops at the ground, wheel up has no limit (higher costs more beam).
+// the ground (its support beams at zero length); the wheel, or holding R / F, lifts it from
+// there. Down stops at the ground, up has no limit (higher costs more beam).
+const KEY_LIFT_SPEED = 0.1; // game units per second while R / F is held (5 cm a second on the board)
 export class MouseInput {
   constructor(camera, dom, game) {
     this.camera = camera;
@@ -322,6 +323,8 @@ export class MouseInput {
     this.offset = new THREE.Vector2(); // how far the real cursor drifted from it during a camera turn
     this.pressing = null; // the in-world button held down (it fires on release over the same button)
     this.cameraBusy = null; // set by main.js: true while the right / middle button moves the camera
+    this.liftKeys = new Set(); // R / F held down
+    this.lastTime = 0;
     this.enabled = true;
     dom.addEventListener('pointerdown', (e) => this.down(e), { capture: true });
     dom.addEventListener('pointermove', (e) => this.onPointer(e));
@@ -334,11 +337,14 @@ export class MouseInput {
       this.move(this.last);
     }, { passive: false });
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyR' || e.code === 'KeyF') this.liftKeys.add(e.code);
       if (!this.dragging) return;
       // Z / X turn the dragged building (Q / E always move the camera)
       if (e.code === 'KeyZ') this.dragging.root.rotateY(Math.PI / 12);
       if (e.code === 'KeyX') this.dragging.root.rotateY(-Math.PI / 12);
     });
+    window.addEventListener('keyup', (e) => this.liftKeys.delete(e.code));
+    window.addEventListener('blur', () => this.liftKeys.clear());
   }
 
   _ray(e) {
@@ -438,9 +444,15 @@ export class MouseInput {
     this.dom.style.cursor = btn ? 'pointer' : hovered?.grabbable ? 'grab' : '';
   }
 
-  /** Called every frame: keeps a dragged building under the cursor while the camera moves. */
+  /** Called every frame: keeps a dragged building under the cursor while the camera moves, and R / F lift it. */
   update() {
-    if (this.dragging && this.last) this.move(this.last);
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - (this.lastTime || now)) / 1000);
+    this.lastTime = now;
+    if (!this.dragging || !this.last) return;
+    const dir = (this.liftKeys.has('KeyR') ? 1 : 0) - (this.liftKeys.has('KeyF') ? 1 : 0);
+    if (dir) this.lift = Math.max(0, this.lift + dir * KEY_LIFT_SPEED * dt);
+    this.move(this.last);
   }
 
   up(e) {
