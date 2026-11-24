@@ -67,7 +67,9 @@ are made in `tools/bake.js`, and the rock bands on the cliff faces are drawn by 
 The first hand of a game is random. When a hand is used up, a framed **choice panel** stands in the hand
 row in front of the player with **two hand cards** (the buildings shown at 45°, and what is in the hand);
 pinch, point at or click a card to deal it. Hovering a building shows what it scores: what it likes on the left in green, what it dislikes on the right in red. The budget sign shows the score and how many points are left until
-the next unlock. A building can't be placed where its box cuts into a finished building ("too close to …").
+the next unlock. A carried building never sinks below the ground (it rests on its support beams' feet) and never
+moves into a finished building: it is pushed out to the side, or held in the air, up onto the roof it touches.
+Collision follows each model in a few horizontal layers, each a box turned with the building (`src/collision.js`).
 
 **Score** counts every point placements earned or lost; it is separate from the budget. At score
 milestones (20, 50, 90, 140, 200, then every 80) a **random** locked building pack joins the deck (the budget sign
@@ -134,7 +136,7 @@ python -m http.server 8123 --directory webxr
 Then open <http://localhost:8123>.
 
 - **Desktop:** left-drag buildings with the mouse. A dragged building snaps onto the ground; wheel up lifts
-  it (no limit, but taller beams cost more), wheel down brings it back to the ground. Z/X rotates it. The
+  it (no limit, but taller beams cost more), wheel down brings it back to the ground (or hold R / F). Z/X rotates it. The
   camera works like the Unity Scene view (`src/camera-controls.js`): right-drag looks around, W A S D or the
   arrow keys fly, Q/E go down / up, Shift is faster, the wheel moves forward / back, middle-drag pans.
   All of it also works while carrying a building, except the wheel, which then sets its height.
@@ -198,6 +200,7 @@ To change the sandbox, edit `SANDBOX` at the top of `tools/bake.js` and bake aga
   node, including ore and gas resource nodes. That is why the commit says "working except resource
   scoring". Here they score as the ScriptableObjects describe, for example Gas Extractor next to gas +4.
 - **Grabbed buildings stay upright.** They follow the controller's yaw only, so the support beams stay vertical.
+- **Grabbed buildings stop at the ground and at other buildings** instead of going through them (`Game.carry`).
 - **Ray grab:** on controllers, the thumbstick pushes the building away or pulls it in.
 - MK Toon shading is approximated with `MeshToonMaterial`. The gas VFX Graph is a simple puff effect.
 - AR mode (`immersive-ar`) uses the same layout over the real world. VR mode adds a procedural Mars evening sky.

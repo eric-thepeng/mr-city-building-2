@@ -10,7 +10,6 @@ const PINCH_END = 0.04;
 const tmpM = new THREE.Matrix4();
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
-const DOWN = new THREE.Vector3(0, -1, 0);
 const tmpQ = new THREE.Quaternion();
 const tmpBox = new THREE.Box3();
 const tmpP = new THREE.Vector3();
@@ -276,9 +275,10 @@ export class XRInput {
           }
         }
         const pose = s.currentPose(s.pose);
-        this.game.setWorldPosition(b, tmpV.copy(s.localPos).applyMatrix4(pose));
         const yawNow = yawOnly(tmpQ2.setFromRotationMatrix(pose), tmpQ2);
         b.root.quaternion.copy(tmpQ.copy(s.yawStart).invert()).premultiply(yawNow).multiply(s.objYawStart);
+        // follows the hand, but stops on the ground and at other buildings instead of going in
+        this.game.carry(b, tmpV.copy(s.localPos).applyMatrix4(pose));
         s.line.scale.z = s.grabMode === 'ray' ? s.localPos.length() : 0.05;
         s.cursor.visible = false;
         continue;
@@ -306,8 +306,9 @@ export class XRInput {
 }
 
 // Left mouse: drag buildings and press in-world buttons. A dragged building snaps onto
-// the ground (its support beams at zero length); the wheel lifts it from there. Wheel down
-// stops at the ground, wheel up has no limit (higher costs more beam).
+// the ground (its support beams at zero length); the wheel, or holding R / F, lifts it from
+// there. Down stops at the ground, up has no limit (higher costs more beam).
+const KEY_LIFT_SPEED = 0.1; // game units per second while R / F is held (5 cm a second on the board)
 export class MouseInput {
   constructor(camera, dom, game) {
     this.camera = camera;
@@ -318,11 +319,12 @@ export class MouseInput {
     this.dragging = null;
     this.hovered = null;
     this.lift = 0; // game units above the snapped ground position
-    this.probe = new THREE.Raycaster();
     this.last = null; // where the building is carried on screen, kept while the camera flies
     this.offset = new THREE.Vector2(); // how far the real cursor drifted from it during a camera turn
     this.pressing = null; // the in-world button held down (it fires on release over the same button)
     this.cameraBusy = null; // set by main.js: true while the right / middle button moves the camera
+    this.liftKeys = new Set(); // R / F held down
+    this.lastTime = 0;
     this.enabled = true;
     dom.addEventListener('pointerdown', (e) => this.down(e), { capture: true });
     dom.addEventListener('pointermove', (e) => this.onPointer(e));
@@ -335,11 +337,14 @@ export class MouseInput {
       this.move(this.last);
     }, { passive: false });
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyR' || e.code === 'KeyF') this.liftKeys.add(e.code);
       if (!this.dragging) return;
       // Z / X turn the dragged building (Q / E always move the camera)
       if (e.code === 'KeyZ') this.dragging.root.rotateY(Math.PI / 12);
       if (e.code === 'KeyX') this.dragging.root.rotateY(-Math.PI / 12);
     });
+    window.addEventListener('keyup', (e) => this.liftKeys.delete(e.code));
+    window.addEventListener('blur', () => this.liftKeys.clear());
   }
 
   _ray(e) {
@@ -368,7 +373,6 @@ export class MouseInput {
     this.hovered = null;
     this.dragging = b;
     this.lift = 0; // snap to the ground
-    b.lift = 0;
     this.last = { clientX: e.clientX, clientY: e.clientY };
     this.offset.set(0, 0);
     e.stopImmediatePropagation();
@@ -410,34 +414,11 @@ export class MouseInput {
       const board = this.game.board;
       const k = board.scale.y;
       if (ground) {
-        // rest the building just above the highest ground under its support beams
-        this.game.setWorldPosition(b, ground.point);
-        // Snap: the highest ground under the support beams, measured the way the beams
-        // measure it (baked heightfield, plus finished buildings and nodes they can stand on).
-        const hf = this.game.assets.heightfield;
-        const solids = this.game.obstacleTargets(b);
-        let top = -Infinity;
-        b.root.updateMatrixWorld(true);
-        const feet = b.beams.length ? b.beams.map((beam) => beam.holder) : [b.root];
-        const hitY = (ground.point.y - board.position.y) / k; // where the cursor ray landed, in board units
-        for (const foot of feet) {
-          foot.getWorldPosition(tmpV);
-          board.worldToLocal(tmpV2.copy(tmpV));
-          let h = hf.at(tmpV2.x, tmpV2.z);
-          // off the heightfield (e.g. the ray hit the board's side wall): use the hit point itself
-          if (!Number.isFinite(h)) h = hitY;
-          this.probe.set(tmpV.setY(board.position.y + 100 * k), DOWN);
-          const hit = this.probe.intersectObjects(solids, false)[0];
-          const on = hit?.object.userData.building;
-          if (hit && (!on || on.isResource || on.info.standOn)) h = Math.max(h, (hit.point.y - board.position.y) / k);
-          top = Math.max(top, h);
-        }
-        // board is only yawed and uniformly scaled, so heights convert directly
-        const beamDrop = b.beams.length ? -b.beams[0].holder.position.y : 0;
-        // +0.001: resting exactly on the ground can read as just below it (float precision)
-        if (!Number.isFinite(top)) top = hitY;
-        b.root.position.y = top + beamDrop + 0.001 + this.lift;
-        b.lift = this.lift;
+        // rest the building on the highest ground under its support beams, lifted by the
+        // wheel, and kept out of finished buildings (Game.carry). Where a beam foot is off
+        // the terrain (e.g. the ray hit the board's side wall), the hit point is the ground.
+        const hitY = (ground.point.y - board.position.y) / k;
+        this.game.carry(b, ground.point, this.lift, hitY);
       } else {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -b.root.getWorldPosition(tmpV2).y);
         if (this.raycaster.ray.intersectPlane(plane, tmpV)) {
@@ -461,9 +442,15 @@ export class MouseInput {
     this.dom.style.cursor = btn ? 'pointer' : hovered?.grabbable ? 'grab' : '';
   }
 
-  /** Called every frame: keeps a dragged building under the cursor while the camera moves. */
+  /** Called every frame: keeps a dragged building under the cursor while the camera moves, and R / F lift it. */
   update() {
-    if (this.dragging && this.last) this.move(this.last);
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - (this.lastTime || now)) / 1000);
+    this.lastTime = now;
+    if (!this.dragging || !this.last) return;
+    const dir = (this.liftKeys.has('KeyR') ? 1 : 0) - (this.liftKeys.has('KeyF') ? 1 : 0);
+    if (dir) this.lift = Math.max(0, this.lift + dir * KEY_LIFT_SPEED * dt);
+    this.move(this.last);
   }
 
   up(e) {
@@ -482,7 +469,6 @@ export class MouseInput {
     this.dragging = null;
     this.offset.set(0, 0);
     this.dom.classList.remove('carrying');
-    b.lift = 0;
     b.onRelease();
   }
 }
