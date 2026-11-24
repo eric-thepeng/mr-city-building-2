@@ -770,8 +770,7 @@ export class Building {
       this.currentCost = Math.trunc(total * (this.def.beamCost ?? 100)); // money per game unit of beam
       const affordable = this.currentCost <= money.amount;
       this.setDisplayState(affordable);
-      const lifted = this.lift > 0.001 ? ` · lifted ${+(this.lift * BOARD_SCALE * 100).toFixed(1)} cm` : '';
-      this.nameLabel.set(`cost: ${this.currentCost}${lifted}`, { fg: affordable ? '#ffffff' : '#ff5a5a' });
+      this.nameLabel.set(`cost: ${this.currentCost}`, { fg: affordable ? '#ffffff' : '#ff5a5a' });
     }
     this.calculateScoring(false);
   }

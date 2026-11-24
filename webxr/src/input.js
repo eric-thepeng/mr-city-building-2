@@ -373,7 +373,6 @@ export class MouseInput {
     this.hovered = null;
     this.dragging = b;
     this.lift = 0; // snap to the ground
-    b.lift = 0;
     this.last = { clientX: e.clientX, clientY: e.clientY };
     this.offset.set(0, 0);
     e.stopImmediatePropagation();
@@ -420,7 +419,6 @@ export class MouseInput {
         // the terrain (e.g. the ray hit the board's side wall), the hit point is the ground.
         const hitY = (ground.point.y - board.position.y) / k;
         this.game.carry(b, ground.point, this.lift, hitY);
-        b.lift = this.lift;
       } else {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -b.root.getWorldPosition(tmpV2).y);
         if (this.raycaster.ray.intersectPlane(plane, tmpV)) {
@@ -471,7 +469,6 @@ export class MouseInput {
     this.dragging = null;
     this.offset.set(0, 0);
     this.dom.classList.remove('carrying');
-    b.lift = 0;
     b.onRelease();
   }
 }
