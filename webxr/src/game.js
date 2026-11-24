@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Label } from './ui.js';
+import { layerBoxes, overlap, poseOf, OVERLAP_TOL } from './collision.js';
 
 export const State = Object.freeze({ WAITING: 'WAITING', ONGOING: 'ONGOING', COMPLETE: 'COMPLETE' });
 
@@ -12,8 +13,8 @@ export const BOARD_SCALE = 0.5;
 const DOWN = new THREE.Vector3(0, -1, 0);
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
-const boxA = new THREE.Box3();
-const boxB = new THREE.Box3();
+const poseA = {};
+const poseB = {};
 
 // ------------------------------------------------------------------ Money
 class MoneyManager {
@@ -596,11 +597,21 @@ export class Building {
     this.collider.position.copy(center);
     this.collider.userData.building = this;
     this.root.add(this.collider);
+    // Collision follows the model in layers (see collision.js); the box above stays for grabbing
+    this.layers = resource ? [] : game.layersFor(this.modelName, this.regular, this.root);
     // what other buildings' beams can land on once this one is finished
     this.solids = [];
     // (clouds are not ground: beams pass through them)
     if (resource) { if (!resource.air) this.regular.traverse((o) => o.isMesh && this.solids.push(o)); }
-    else this.solids.push(this.collider);
+    else if (!this.layers.length) this.solids.push(this.collider);
+    for (const l of this.layers) {
+      const solid = new THREE.Mesh(game.boxGeometry, game.colliderMaterial);
+      solid.scale.set(l.x1 - l.x0, l.y1 - l.y0, l.z1 - l.z0);
+      solid.position.set((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2, (l.z0 + l.z1) / 2);
+      solid.userData.building = this;
+      this.root.add(solid);
+      this.solids.push(solid);
+    }
     const top = box.max.y;
 
     // support beams
@@ -657,6 +668,7 @@ export class Building {
     if (this.state === State.COMPLETE) return false;
     this.cancelTween();
     if (this.state === State.WAITING) this.state = State.ONGOING;
+    this.freeSpot = null; // the last carried position that cut into nothing
     this.onHoverEnd();
     this.detectSphere.visible = true;
     return true;
@@ -749,7 +761,7 @@ export class Building {
       this.currentCost = -1;
       // a beam would be longer than this building allows (too high, or over a cliff edge)
       this.nameLabel.set(this.overlaps
-        ? `too close to ${this.game.progress.name(this.overlaps.key)}`
+        ? `too close to ${this.game.progress.name(this.overlaps.building.key)}`
         : this.blockedBy
         ? `can't stand on ${this.game.progress.name(this.blockedBy.key)}`
         : `beams too long (max ${+(this.maxBeamLength * BOARD_SCALE * 100).toFixed(1)} cm)`, { fg: '#ff5a5a' });
@@ -800,15 +812,19 @@ export class Building {
     beam.body.material = height > this.maxBeamLength ? this.game.beamErrorMaterial : this.game.beamMaterial;
   }
 
-  /** A finished building whose box this one would cut into (touching is fine). */
+  /**
+   * The finished building this one cuts deepest into (touching is fine), as
+   * { building, x, z, depth, up } (see collision.js overlap), or null.
+   */
   findOverlap() {
-    this.root.updateMatrixWorld(true);
-    const mine = boxA.copy(this.localBox).applyMatrix4(this.root.matrix).expandByScalar(-0.003);
+    const me = poseOf(this.root, poseA);
+    let worst = null;
     for (const b of this.game.buildings) {
       if (b === this || b.isResource || b.state !== State.COMPLETE) continue;
-      if (mine.intersectsBox(boxB.copy(b.localBox).applyMatrix4(b.root.matrix))) return b;
+      const hit = overlap(this.layers, me, b.layers, poseOf(b.root, poseB));
+      if (hit && (!worst || hit.depth > worst.depth)) worst = Object.assign(hit, { building: b });
     }
-    return null;
+    return worst;
   }
 
   setDisplayState(ok, force = false) {
@@ -1265,6 +1281,77 @@ export class Game {
   /** Move a building to a world position (converted to board space). */
   setWorldPosition(b, worldPos) {
     b.root.position.copy(this.board.worldToLocal(tmpV.copy(worldPos)));
+  }
+
+  /** Collision layers of a model, made once and shared by every building that uses it. */
+  layersFor(modelName, object, root) {
+    const cache = (this._layers ??= new Map());
+    if (!cache.has(modelName)) cache.set(modelName, layerBoxes(object, root));
+    return cache.get(modelName);
+  }
+
+  /**
+   * The lowest height (board space) a building can be at here: its support beam feet on the
+   * terrain, or on finished buildings and nodes the beams may stand on, measured the way the
+   * beams measure it. `fallback` is used where a foot is off the terrain.
+   */
+  restHeight(b, fallback = -Infinity) {
+    const board = this.board;
+    const k = board.scale.y;
+    const hf = this.assets.heightfield;
+    const solids = this.obstacleTargets(b);
+    const probe = (this._probe ??= new THREE.Raycaster());
+    b.root.updateMatrixWorld(true);
+    let top = -Infinity;
+    const feet = b.beams.length ? b.beams.map((beam) => beam.holder) : [b.root];
+    for (const foot of feet) {
+      foot.getWorldPosition(tmpV);
+      board.worldToLocal(tmpV2.copy(tmpV));
+      let h = hf.at(tmpV2.x, tmpV2.z);
+      if (!Number.isFinite(h)) h = fallback;
+      probe.set(tmpV.setY(board.position.y + 100 * k), DOWN); // board: only yawed and evenly scaled
+      const hit = probe.intersectObjects(solids, false)[0];
+      const on = hit?.object.userData.building;
+      if (hit && (!on || on.isResource || on.info.standOn)) h = Math.max(h, (hit.point.y - board.position.y) / k);
+      top = Math.max(top, h);
+    }
+    if (!Number.isFinite(top)) top = fallback;
+    const beamDrop = b.beams.length ? -b.beams[0].holder.position.y : 0;
+    // +0.001: resting exactly on the ground can read as just below it (float precision)
+    return top + beamDrop + 0.001;
+  }
+
+  /**
+   * Moves a carried building to worldPos, but never below its resting height and never into a
+   * finished building: it is pushed out sideways (or, held in the air, up onto the roof it
+   * touches), and if that does not free it, it stays at the last free spot nearby.
+   * lift: a number rests it that high above the ground (mouse); null keeps the height it is
+   * held at, but not lower than resting (hands and controllers).
+   */
+  carry(b, worldPos, lift = null, fallback = -Infinity) {
+    const p = b.root.position;
+    this.board.worldToLocal(p.copy(worldPos));
+    let want = p.y;
+    const settle = () => {
+      const rest = this.restHeight(b, fallback);
+      p.y = lift === null ? Math.max(want, rest) : rest + lift;
+    };
+    settle();
+    const target = (this._carryTarget ??= new THREE.Vector3()).copy(p);
+    let hit = b.findOverlap();
+    for (let i = 0; hit && i < 4; i++) {
+      const side = hit.depth - OVERLAP_TOL + 0.0005;
+      if (lift === null && hit.up < side) {
+        want = p.y + hit.up + 0.0005; // fully clear, so its beams land on that roof
+      } else {
+        p.x += hit.x * side;
+        p.z += hit.z * side;
+      }
+      settle();
+      hit = b.findOverlap();
+    }
+    if (!hit) (b.freeSpot ??= new THREE.Vector3()).copy(p);
+    else if (b.freeSpot && b.freeSpot.distanceTo(target) < 0.3) p.copy(b.freeSpot);
   }
 
   /** What a pointer can hover: hand buildings, plus nodes, finished buildings and the choice panel (tooltips). */

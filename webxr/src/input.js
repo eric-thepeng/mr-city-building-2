@@ -10,7 +10,6 @@ const PINCH_END = 0.04;
 const tmpM = new THREE.Matrix4();
 const tmpV = new THREE.Vector3();
 const tmpV2 = new THREE.Vector3();
-const DOWN = new THREE.Vector3(0, -1, 0);
 const tmpQ = new THREE.Quaternion();
 const tmpBox = new THREE.Box3();
 const tmpP = new THREE.Vector3();
@@ -276,9 +275,10 @@ export class XRInput {
           }
         }
         const pose = s.currentPose(s.pose);
-        this.game.setWorldPosition(b, tmpV.copy(s.localPos).applyMatrix4(pose));
         const yawNow = yawOnly(tmpQ2.setFromRotationMatrix(pose), tmpQ2);
         b.root.quaternion.copy(tmpQ.copy(s.yawStart).invert()).premultiply(yawNow).multiply(s.objYawStart);
+        // follows the hand, but stops on the ground and at other buildings instead of going in
+        this.game.carry(b, tmpV.copy(s.localPos).applyMatrix4(pose));
         s.line.scale.z = s.grabMode === 'ray' ? s.localPos.length() : 0.05;
         s.cursor.visible = false;
         continue;
@@ -318,7 +318,6 @@ export class MouseInput {
     this.dragging = null;
     this.hovered = null;
     this.lift = 0; // game units above the snapped ground position
-    this.probe = new THREE.Raycaster();
     this.last = null; // where the building is carried on screen, kept while the camera flies
     this.offset = new THREE.Vector2(); // how far the real cursor drifted from it during a camera turn
     this.pressing = null; // the in-world button held down (it fires on release over the same button)
@@ -410,33 +409,11 @@ export class MouseInput {
       const board = this.game.board;
       const k = board.scale.y;
       if (ground) {
-        // rest the building just above the highest ground under its support beams
-        this.game.setWorldPosition(b, ground.point);
-        // Snap: the highest ground under the support beams, measured the way the beams
-        // measure it (baked heightfield, plus finished buildings and nodes they can stand on).
-        const hf = this.game.assets.heightfield;
-        const solids = this.game.obstacleTargets(b);
-        let top = -Infinity;
-        b.root.updateMatrixWorld(true);
-        const feet = b.beams.length ? b.beams.map((beam) => beam.holder) : [b.root];
-        const hitY = (ground.point.y - board.position.y) / k; // where the cursor ray landed, in board units
-        for (const foot of feet) {
-          foot.getWorldPosition(tmpV);
-          board.worldToLocal(tmpV2.copy(tmpV));
-          let h = hf.at(tmpV2.x, tmpV2.z);
-          // off the heightfield (e.g. the ray hit the board's side wall): use the hit point itself
-          if (!Number.isFinite(h)) h = hitY;
-          this.probe.set(tmpV.setY(board.position.y + 100 * k), DOWN);
-          const hit = this.probe.intersectObjects(solids, false)[0];
-          const on = hit?.object.userData.building;
-          if (hit && (!on || on.isResource || on.info.standOn)) h = Math.max(h, (hit.point.y - board.position.y) / k);
-          top = Math.max(top, h);
-        }
-        // board is only yawed and uniformly scaled, so heights convert directly
-        const beamDrop = b.beams.length ? -b.beams[0].holder.position.y : 0;
-        // +0.001: resting exactly on the ground can read as just below it (float precision)
-        if (!Number.isFinite(top)) top = hitY;
-        b.root.position.y = top + beamDrop + 0.001 + this.lift;
+        // rest the building on the highest ground under its support beams, lifted by the
+        // wheel, and kept out of finished buildings (Game.carry). Where a beam foot is off
+        // the terrain (e.g. the ray hit the board's side wall), the hit point is the ground.
+        const hitY = (ground.point.y - board.position.y) / k;
+        this.game.carry(b, ground.point, this.lift, hitY);
         b.lift = this.lift;
       } else {
         const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -b.root.getWorldPosition(tmpV2).y);
