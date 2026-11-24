@@ -54,7 +54,8 @@ inside the board are in the same game units (Unity metres); the `Board` object i
 | `assets.js` `AssetLibrary` (models from `world.glb`, materials) | `MarsModels.ts` `ModelLibrary` + `Assets/Materials/MH_*.mat` |
 | `assets.js` terrain `flatShading` + `addRockStrata` | `MarsTerrain.ts` (face normals) + `Assets/Textures/terrain_strata.png` (from `tools/gen-strata.py`) |
 | `Building` (states, beams, cost, overlap, scoring, badges, pop) | `MarsBuilding.ts` |
-| `Game`, `MoneyManager`, `HandManager`, clouds, dust ring, flying scores | `MarsGame.ts` |
+| `collision.js` (layer boxes that follow each model, overlap and push-out) | `MarsCollision.ts` |
+| `Game`, `MoneyManager`, `HandManager`, clouds, dust ring, flying scores, `Game.carry` | `MarsGame.ts` |
 | `Progress` (score, milestones, packs, card text, choice flow) | `MarsProgress.ts` |
 | `makeGasVents` (one InstancedMesh) | `MarsMeshes.ts` `GasPuffs` (one MeshBuilder mesh rewritten per frame) |
 | `mergeResourceVisuals` | `ModelLibrary.mergeStatic` (ore rocks + crystal veins: 2 draw calls) |
@@ -69,12 +70,15 @@ inside the board are in the same game units (Unity metres); the `Board` object i
 
 `UIKitHelpers.ts` is CLAD's UI Kit 4.0 helper, copied unchanged.
 
-The UI and interaction follow `webxr-main` up to commit `4ac362ed`: two-sided hover cards, the pack
-card's tables, card buildings fixed at 45° with a score tip, and a name tip on finished buildings.
+The UI and interaction follow `webxr-main` up to commit `4960534b`: two-sided hover cards, the pack
+card's tables, card buildings fixed at 45° with a score tip, a name tip on finished buildings, and
+carried buildings that stop at the ground and at other buildings (collision follows each model in
+layers; the label shows only the cost). The carry limit runs on SIK's `onManipulationUpdate`, right
+after it moves the building to the hand, so the building never shows inside the terrain or a building.
 The game data follows `webxr-main` up to `c4a3652b` (balance version 1).
 Not ported, because they only apply to the desktop web page: the landing page, the Mars sky and fog,
-and moving the camera with the mouse while carrying. The choice panel's gold border is also not
-reproduced. Button hover and press states come from UI Kit.
+moving the camera with the mouse while carrying, and holding R / F to lift a building with the
+mouse. The choice panel's gold border is also not reproduced. Button hover and press states come from UI Kit.
 
 ### Real Space (Specs only, no WebXR counterpart)
 
@@ -127,7 +131,7 @@ finds `block_<Key>` by name. A new material name in the GLB needs an entry in `M
 |---|---|---|
 | Models | one baked `world.glb` | the same GLB, imported once; buildings are copies of its nodes |
 | Draw calls | 27 | about 20 for the board, hand and sign (terrain 2, rocks + crystals 2, gas 1, clouds 6, the hand's buildings, sign frame + buttons), plus text labels |
-| Support-beam ground test | heightfield lookup + short ray | heightfield lookup + box tests (no physics raycasts) |
+| Support-beam ground test | heightfield lookup + short ray | heightfield lookup + layer box tests (no physics raycasts) |
 | Resource nodes | merged per material | merged per material at start (`mergeStatic`) |
 | Red "can't build" model | second copy, made on first use | a material swap on the same model |
 | Textures | two 256² atlases | the same two |
@@ -142,8 +146,6 @@ see-through on Specs).
 - **Beams on resource nodes** stand on the node's bounding box instead of its exact rock surface.
 - **Mouse in Preview** drags in SIK's camera plane; there is no wheel lift or Z/X rotation. On Specs,
   carrying is yaw-only through SIK, as in WebXR.
-- The name label of a carried building shows how high its beams lift it ("lifted 1.2 cm") in XR as
-  well; WebXR showed that only for mouse lifting.
 
 ## Testing status
 

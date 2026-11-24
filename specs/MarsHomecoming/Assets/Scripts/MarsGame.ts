@@ -14,6 +14,7 @@ import {buildTerrainMesh} from "./MarsTerrain"
 import {ChoiceState, Progress} from "./MarsProgress"
 import {WorldLabel, rgba} from "./MarsLabelsUI"
 import {ScoreCard} from "./MarsScoreCardUI"
+import {Layers, OVERLAP_TOL, layerBoxes} from "./MarsCollision"
 
 export interface Tween {
   duration: number
@@ -139,6 +140,7 @@ export class Game {
   time = 0
   debugColliders = false
   private tweens: Tween[] = []
+  private layerCache = new Map<string, Layers>()
   private clouds: Building[] = []
   private reforms: Reform[] = []
   private gas: GasPuffs | null = null
@@ -533,6 +535,75 @@ export class Game {
       }
     }
     this.gas?.update(this.time)
+  }
+
+  /** Collision layers of a model, made once and shared by every building that uses it. */
+  layersFor(modelName: string, model: SceneObject, root: SceneObject): Layers {
+    let l = this.layerCache.get(modelName)
+    if (!l) this.layerCache.set(modelName, (l = layerBoxes(model, root)))
+    return l
+  }
+
+  /**
+   * The lowest height (board space) building b can stand at, at p turned by q: its support
+   * beam feet on the terrain, or on finished buildings and nodes the beams may stand on (the
+   * highest thing under each foot, as WebXR's ray from above finds it). -Infinity off the board.
+   */
+  restHeight(b: Building, p: vec3, q: quat): number {
+    const hf = this.heightfield
+    let top = -Infinity
+    for (const f of b.feet(p, q)) {
+      let h = hf.at(f.x, f.z)
+      // the highest solid under the foot; only nodes and platforms can be stood on
+      let solid = -Infinity
+      let on: Building | null = null
+      for (const o of this.buildings) {
+        if (o === b || o.state !== State.COMPLETE) continue
+        const t = o.solidTopAt(f.x, f.z)
+        if (t > solid) {
+          solid = t
+          on = o
+        }
+      }
+      if (on && (on.isResource || on.info.standOn)) h = Math.max(h, solid)
+      top = Math.max(top, h)
+    }
+    if (top === -Infinity) return top
+    // +0.001: resting exactly on the ground can read as just below it (float precision)
+    return top + b.beamDrop + 0.001
+  }
+
+  /**
+   * Port of Game.carry (WebXR, hands and controllers): after InteractionKit moves a carried
+   * building to the hand, keep it at the height it is held, but never below its resting height
+   * and never inside a finished building: it is pushed out sideways (or, held in the air, up
+   * onto the roof it touches), and if that does not free it, it stays at the last free spot nearby.
+   */
+  carry(b: Building): void {
+    const t = b.rootT
+    const q = t.getLocalRotation()
+    const p = t.getLocalPosition()
+    let want = p.y
+    const settle = () => {
+      p.y = Math.max(want, this.restHeight(b, p, q))
+      t.setLocalPosition(p)
+    }
+    settle()
+    const target = new vec3(p.x, p.y, p.z)
+    let hit = b.findOverlap()
+    for (let i = 0; hit && i < 4; i++) {
+      const side = hit.depth - OVERLAP_TOL + 0.0005
+      if (hit.up < side) {
+        want = p.y + hit.up + 0.0005 // fully clear, so its beams land on that roof
+      } else {
+        p.x += hit.x * side
+        p.z += hit.z * side
+      }
+      settle()
+      hit = b.findOverlap()
+    }
+    if (!hit) b.freeSpot = new vec3(p.x, p.y, p.z)
+    else if (b.freeSpot && b.freeSpot.distance(target) < 0.3) t.setLocalPosition(b.freeSpot)
   }
 
   /** Buildings that are still waiting in the hand (for tests and the README). */

@@ -16,6 +16,15 @@ import type {Game, Tween} from "./MarsGame"
 import {BlockDef, BuildingInfo, ResourceDef, displayName} from "./MarsData"
 import {Box, boxExpandPoint, boxIsEmpty, emptyBox} from "./MarsModels"
 import {WorldLabel, rgba} from "./MarsLabelsUI"
+import {Hit, Layers, NO_LAYERS, Pose, overlap, poseOf, topAt} from "./MarsCollision"
+
+/** The finished building a carried one cuts deepest into, and how to push it out. */
+export interface Overlap extends Hit {
+  building: Building
+}
+
+const poseA: Pose = {x: 0, y: 0, z: 0, c: 1, s: 0}
+const poseB: Pose = {x: 0, y: 0, z: 0, c: 1, s: 0}
 
 export enum State {
   WAITING = "WAITING",
@@ -59,10 +68,6 @@ export function placedBox(local: Box, p: vec3, q: quat, shrink = 0): Box {
   return out
 }
 
-function boxesIntersect(a: Box, b: Box): boolean {
-  return a[0] <= b[3] && a[3] >= b[0] && a[1] <= b[4] && a[4] >= b[1] && a[2] <= b[5] && a[5] >= b[2]
-}
-
 export class Building {
   readonly key: string
   readonly isResource: boolean
@@ -81,12 +86,15 @@ export class Building {
   canScore: boolean
   currentCost = 0
   displayState = true
-  lift = 0
   tween: Tween | null = null
-  /** finished buildings and resources: where they stand, for beams and overlaps */
+  /** finished buildings and resources: where they stand (resources: what beams land on) */
   boardBox: Box | null = null
+  /** collision that follows the model, in a few horizontal layers (see MarsCollision) */
+  readonly layers: Layers
+  /** the last carried position that cut into nothing (Game.carry) */
+  freeSpot: vec3 | null = null
   blockedBy: Building | null = null
-  overlaps: Building | null = null
+  overlaps: Overlap | null = null
   // clouds
   depleted = false
   home: vec3 | null = null
@@ -129,8 +137,10 @@ export class Building {
 
     this.modelName = resource ? `resource_${resource.index}` : `block_${key}`
     this.model = game.models.instance(this.modelName, this.root)
+    // collision follows the model in layers; the box below stays for grabbing
+    this.layers = resource ? NO_LAYERS : game.layersFor(this.modelName, this.model, this.root)
 
-    // the box used for grabbing, overlaps and as ground for other buildings' beams
+    // the box used for grabbing (and, for resource nodes, as ground for beams)
     let box = game.models.localBox(this.model, this.root)
     if (boxIsEmpty(box)) box = [-0.02, -0.02, -0.02, 0.02, 0.02, 0.02]
     if (!resource) {
@@ -231,6 +241,10 @@ export class Building {
     manip.setCanScale(false)
     manip.rotationAxis = RotationAxis.Y
     manip.onManipulationStart.add(() => this.onStartGrab())
+    // right after InteractionKit moves it to the hand: stop at the ground and other buildings
+    manip.onManipulationUpdate.add(() => {
+      if (this.state === State.ONGOING) this.game.carry(this)
+    })
     manip.onManipulationEnd.add(() => this.onRelease())
     interactable.onHoverEnter.add(() => this.setHovered(true))
     interactable.onHoverExit.add(() => this.setHovered(false))
@@ -279,6 +293,7 @@ export class Building {
     if (this.state === State.COMPLETE || this.game.over) return
     this.cancelTween()
     if (this.state === State.WAITING) this.state = State.ONGOING
+    this.freeSpot = null
     this.setHovered(false)
     if (this.detect) this.detect.enabled = true
     this.game.onGrabStart(this)
@@ -337,14 +352,12 @@ export class Building {
       if (len === -1) canBuild = false
       total += len
     }
-    // how far above the ground it is held (shown on the label, like the mouse lift in WebXR)
-    this.lift = this.beams.length ? Math.max(0, Math.min(...this.beams.map((b) => b.length))) : 0
     const label = this.nameLabel
     if (!canBuild) {
       this.currentCost = -1
       label?.set(
         this.overlaps
-          ? `too close to ${displayName(this.game.data, this.overlaps.key)}`
+          ? `too close to ${displayName(this.game.data, this.overlaps.building.key)}`
           : room === "object"
             ? "blocked by a real object"
             : room === "unmapped"
@@ -359,8 +372,7 @@ export class Building {
       this.currentCost = Math.trunc(total * (this.def.beamCost ?? 100)) // money per game unit of beam
       const affordable = this.currentCost <= this.game.money.amount
       this.setDisplayState(affordable)
-      const lifted = this.lift > 0.001 ? ` · lifted ${cm(this.lift)} cm` : ""
-      label?.set(`cost: ${this.currentCost}${lifted}`, affordable ? WHITE : RED)
+      label?.set(`cost: ${this.currentCost}`, affordable ? WHITE : RED)
     }
     this.calculateScoring(false)
   }
@@ -372,14 +384,15 @@ export class Building {
     // terrain: O(1) lookup on the baked heightfield
     const ground = game.heightfield.at(p.x, p.z)
     let distance = p.y >= ground ? p.y - ground : Infinity
-    // finished buildings and resource nodes: the closest box straight below, within reach
+    // finished buildings (their layers) and resource nodes (their box): the closest top
+    // straight below, within reach (WebXR: a short ray down onto the solids)
     const far = Math.min(this.maxBeamLength, distance)
     let hit: Building | null = null
     for (const other of game.buildings) {
-      if (other === this || other.state !== State.COMPLETE || !other.boardBox) continue
-      const b = other.boardBox
-      if (p.x < b[0] || p.x > b[3] || p.z < b[2] || p.z > b[5] || p.y < b[4] - 1e-4) continue
-      const d = Math.max(0, p.y - b[4])
+      if (other === this || other.state !== State.COMPLETE) continue
+      const top = other.solidTopAt(p.x, p.z, p.y + 1e-4)
+      if (top === -Infinity) continue
+      const d = Math.max(0, p.y - top)
       if (d <= far && d < distance) {
         distance = d
         hit = other
@@ -407,14 +420,40 @@ export class Building {
     beam.visual.mainMaterial = height > this.maxBeamLength ? this.game.models.mats.beamError : this.game.models.mats.beam
   }
 
-  /** A finished building whose box this one would cut into (touching is fine). */
-  private findOverlap(): Building | null {
-    const mine = placedBox(this.localBox, this.position, this.rootT.getLocalRotation(), 0.003)
+  /**
+   * The finished building this one cuts deepest into (touching is fine), with how to push it
+   * out (see MarsCollision overlap), or null.
+   */
+  findOverlap(): Overlap | null {
+    const me = poseOf(this.rootT, poseA)
+    let worst: Overlap | null = null
     for (const b of this.game.buildings) {
-      if (b === this || b.isResource || b.state !== State.COMPLETE || !b.boardBox) continue
-      if (boxesIntersect(mine, b.boardBox)) return b
+      if (b === this || b.isResource || b.state !== State.COMPLETE) continue
+      const hit = overlap(this.layers, me, b.layers, poseOf(b.rootT, poseB))
+      if (hit && (!worst || hit.depth > worst.depth)) worst = {...hit, building: b}
     }
-    return null
+    return worst
+  }
+
+  /**
+   * The highest top of this finished building or node at (x, z) not above `below` (board
+   * space), or -Infinity: what a support beam or a carried building can come down onto.
+   */
+  solidTopAt(x: number, z: number, below = Infinity): number {
+    if (this.layers.list.length) return topAt(this.layers, poseOf(this.rootT, poseA), x, z, below)
+    const b = this.boardBox
+    if (!b || x < b[0] || x > b[3] || z < b[2] || z > b[5] || b[4] > below) return -Infinity
+    return b[4]
+  }
+
+  /** Where the support beams start, in board space, for a building at p turned by q. */
+  feet(p: vec3, q: quat): vec3[] {
+    return this.beams.length ? this.beams.map((b) => q.multiplyVec3(b.anchor).add(p)) : [p]
+  }
+
+  /** How far below the building's origin its beams start (0 without beams). */
+  get beamDrop(): number {
+    return this.beams.length ? -this.beams[0].anchor.y : 0
   }
 
   setDisplayState(ok: boolean, force = false): void {
