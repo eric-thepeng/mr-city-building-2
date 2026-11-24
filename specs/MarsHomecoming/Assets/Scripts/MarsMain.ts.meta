@@ -40,6 +40,7 @@
     firstHand: false
     gameData: false
     modelLibrary: false
+    previewMapMenu: false
     sfxBuild: false
     sfxCloud: false
     sfxCoin: false
@@ -71,6 +72,7 @@
       debugColliders: false
       startWithChoice: false
       firstHand: ""
+      previewMapMenu: false
       sfxBuild: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
       sfxFail: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
       sfxCoin: !<reference.AudioTrackAsset> 00000000-0000-0000-0000-000000000000
@@ -100,6 +102,7 @@
     - '// @input bool debugColliders {"hint":"Draw the grab / hover colliders"}'
     - '// @input bool startWithChoice {"hint":"Debug: start at the first score milestone (new pack card, then the hand choice) instead of a random first hand"}'
     - '// @input string firstHand {"hint":"Debug: deal this hand preset first (e.g. Skywatch_01); empty = a random hand, as in the WebXR version"}'
+    - '// @input bool previewMapMenu {"hint":"Preview: show the Mars Map / Real Space menu (Real Space scans a test room). Off = go straight to the Mars map. Specs always show the menu."}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Sounds"}'

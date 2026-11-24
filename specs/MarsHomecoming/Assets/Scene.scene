@@ -5913,6 +5913,7 @@
     debugColliders: true
     startWithChoice: true
     firstHand: true
+    previewMapMenu: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -5931,6 +5932,7 @@
       debugColliders: false
       startWithChoice: false
       firstHand: ""
+      previewMapMenu: false
       sfxBuild: !<reference.AudioTrackAsset> dc912b75-6f07-49ca-ae62-80d129afd7f9
       sfxFail: !<reference.AudioTrackAsset> 5dc092bd-7a2f-4a44-850f-1c085678f0ef
       sfxCoin: !<reference.AudioTrackAsset> 5a7cb955-3f31-4127-ae5f-acc31e810e3b

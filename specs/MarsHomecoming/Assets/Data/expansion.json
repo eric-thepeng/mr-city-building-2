@@ -50,16 +50,20 @@
     "CrystalVein": { "displayName": "Crystal Vein", "detectDistance": 0.0, "scoring": {} }
   },
   "infoAdd": {
+    "GasExtractor": { "detectDistance": 0.25 },
     "OreNode": { "displayName": "Ore Rocks", "about": "Orange rocks full of metal ore." },
     "GasNode": { "displayName": "Gas Vent", "about": "Gas seeping out of the ground." },
     "IceCloud": { "about": "Ice that floats in the sky. It re-forms elsewhere once used up." },
     "CrystalVein": { "about": "Crystals growing out of the cliff walls." }
   },
   "scoringAdd": {
-    "Factory": { "CliffDrill": 4 },
+    "Factory": { "CliffDrill": 4, "LivingPod": -2, "Farm": -1 },
     "Warehouse": { "CliffDrill": 2, "WeatherStation": 1 },
-    "Farm": { "WeatherStation": 3 },
-    "LivingPod": { "WindTurbine": 2 }
+    "Farm": { "WeatherStation": 3, "Factory": -3, "GasExtractor": -3 },
+    "LivingPod": { "WindTurbine": 2, "Factory": -4, "GasExtractor": -3, "Excavator": -2, "CliffDrill": -2 },
+    "GasExtractor": { "GasNode": 4, "LivingPod": -1, "Farm": -1 },
+    "Excavator": { "OreNode": 1, "LivingPod": -2 },
+    "Bar": { "Factory": 2 }
   },
   "handPresets": [
     { "name": "Highlander_01", "freeMoney": 0, "buildings": { "WindTurbine": 2, "SkyPlatform": 1 } },

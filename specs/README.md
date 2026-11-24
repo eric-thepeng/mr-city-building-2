@@ -71,6 +71,7 @@ inside the board are in the same game units (Unity metres); the `Board` object i
 
 The UI and interaction follow `webxr-main` up to commit `4ac362ed`: two-sided hover cards, the pack
 card's tables, card buildings fixed at 45° with a score tip, and a name tip on finished buildings.
+The game data follows `webxr-main` up to `c4a3652b` (balance version 1).
 Not ported, because they only apply to the desktop web page: the landing page, the Mars sky and fog,
 and moving the camera with the mouse while carrying. The choice panel's gold border is also not
 reproduced. Button hover and press states come from UI Kit.
